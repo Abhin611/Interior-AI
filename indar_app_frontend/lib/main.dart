@@ -6,14 +6,17 @@ import 'providers/theme_provider.dart';
 import 'pages/onboarding_page.dart';
 import 'pages/home_page.dart';
 import 'services/auth_service.dart';
+import 'config.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Supabase.initialize(
-    url: 'https://ivvpwwzlseboyumapyai.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml2dnB3d3psc2Vib3l1bWFweWFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NTgxMDQsImV4cCI6MjA4OTEzNDEwNH0.JBoZB6LWfnUiSfZwByuFUn_ahSArmq7kuqiRxKnTeeY',
-  );
+  if (!isConfigured) {
+    runApp(const _MissingConfigApp());
+    return;
+  }
+
+  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
 
   runApp(
     MultiProvider(
@@ -27,6 +30,31 @@ Future<void> main() async {
 }
 
 final supabase = Supabase.instance.client;
+
+/// Shown when the app was started without env.json, instead of crashing.
+class _MissingConfigApp extends StatelessWidget {
+  const _MissingConfigApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Supabase is not configured.\n\n'
+              'Copy env.example.json to env.json, fill in your keys, then run:\n'
+              'flutter run --dart-define-from-file=env.json',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

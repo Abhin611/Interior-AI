@@ -7,7 +7,7 @@ import asyncio
 import re
 import openpyxl
 from sqlalchemy import select
-from app.database.db import AsyncSessionLocal
+from app.database.db import AsyncSessionLocal, init_db
 
 # ⚠️ Must import ALL models so SQLAlchemy resolves relationships
 from app.models.user import User
@@ -17,6 +17,7 @@ from app.models.product import Product
 from app.models.bundle import Bundle, BundleItem, Transaction
 
 from loguru import logger
+from app.services.storage_service import get_image_url
 
 import os
 from pathlib import Path
@@ -62,6 +63,7 @@ def clean_asset_name(raw) -> str:
 
 
 async def seed():
+    await init_db()  # create tables if this is a fresh database
     async with AsyncSessionLocal() as db:
 
         # ── Seed Themes ───────────────────────────────────────────────
@@ -120,19 +122,22 @@ async def seed():
                 skipped_duplicate += 1
                 continue
 
+            theme_clean = clean_asset_name(theme) if theme else None
+            # Dataset files are named by ASIN (see scripts/build_dataset.py):
+            #   dataset/<theme>/Image/<ASIN>.jpg  and  dataset/<theme>/3d/<ASIN>.glb
             db.add(Product(
                 asin=asin,
-                name=str(name).strip(),
+                name=clean_asset_name(name),
                 price=float(price),
-                image_url=None,             # add later via ImageKit
+                image_url=get_image_url(asin, theme_clean),
                 product_url=f"https://www.amazon.in/dp/{asin}",
-                category=str(ptype).strip() if ptype and str(ptype).strip() else None,
-                theme=str(theme).strip() if theme and str(theme).strip() else None,
-                asset_3d_name=clean_asset_name(asset_3d) if asset_3d else None,
+                category=clean_asset_name(ptype) if ptype and str(ptype).strip() else None,
+                theme=theme_clean,
+                asset_3d_name=asin,
                 is_active=True,
             ))
             added += 1
-            logger.info(f"  + {asin} | {str(name)[:50]} | 3D: {clean_asset_name(asset_3d)}")
+            logger.info(f"  + {asin} | {str(name)[:50]}")
 
         await db.commit()
         logger.info(f"\n✅ Done. Added: {added} | Skipped duplicates: {skipped_duplicate} | Invalid rows: {skipped_invalid}")

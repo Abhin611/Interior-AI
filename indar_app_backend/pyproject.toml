@@ -27,3 +27,9 @@ dependencies = [
     "supabase>=2.28.2",
     "uvicorn[standard]>=0.41.0",
 ]
+
+[dependency-groups]
+dev = [
+    "scipy>=1.18.1",
+    "trimesh>=5.2.1",
+]

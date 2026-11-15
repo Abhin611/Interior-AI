@@ -23,11 +23,21 @@ async def decode_supabase_token(token: str) -> dict:
     Verifies Supabase JWT using their public JWKS.
     Works for both HS256 and ES256 tokens.
     """
-    jwks = await _get_jwks()
-
     # Extract key id from token header
     header = jwt.get_unverified_header(token)
     kid = header.get("kid")
+
+    # Projects using the legacy shared secret sign tokens with HS256 and
+    # publish no JWKS key for them - verify those with SUPABASE_JWT_SECRET.
+    if header.get("alg") == "HS256" and settings.SUPABASE_JWT_SECRET:
+        return jwt.decode(
+            token,
+            settings.SUPABASE_JWT_SECRET,
+            algorithms=["HS256"],
+            options={"verify_aud": False},
+        )
+
+    jwks = await _get_jwks()
 
     # Find matching key
     key = None
