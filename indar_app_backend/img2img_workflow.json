@@ -1,0 +1,73 @@
+{
+  "1": {
+    "inputs": {
+      "image": "room_input.jpg",
+      "upload": "image"
+    },
+    "class_type": "LoadImage",
+    "_meta": {"title": "Load Image"}
+  },
+  "2": {
+    "inputs": {
+      "pixels": ["1", 0],
+      "vae": ["4", 2]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {"title": "VAE Encode"}
+  },
+  "3": {
+    "inputs": {
+      "text": "a room decorated for onam festival, festive decorations, warm lighting, photorealistic",
+      "clip": ["4", 1]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {"title": "Positive Prompt"}
+  },
+  "5": {
+    "inputs": {
+      "text": "cartoon, blurry, low quality, people, text, watermark",
+      "clip": ["4", 1]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {"title": "Negative Prompt"}
+  },
+  "4": {
+    "inputs": {
+      "ckpt_name": "dreamshaper_8.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {"title": "Load Checkpoint"}
+  },
+  "6":  {
+    "inputs": {
+      "seed": 42,
+      "steps": 25,
+      "cfg": 9,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 0.55,
+      "model": ["4", 0],
+      "positive": ["3", 0],
+      "negative": ["5", 0],
+      "latent_image": ["2", 0]
+    },
+    "class_type": "KSampler",
+    "_meta": {"title": "KSampler"}
+  },
+  "7": {
+    "inputs": {
+      "samples": ["6", 0],
+      "vae": ["4", 2]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {"title": "VAE Decode"}
+  },
+  "8": {
+    "inputs": {
+      "filename_prefix": "design_output",
+      "images": ["7", 0]
+    },
+    "class_type": "SaveImage",
+    "_meta": {"title": "Save Image"}
+  }
+}

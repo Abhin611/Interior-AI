@@ -15,6 +15,9 @@ Map<String, String> themes = {
   "Party":
       "A lively party room with decorations, lights and music atmosphere",
 
-  "Wedding":
-      "An elegant wedding themed room with flowers and romantic lights",
+  "Pop-culture":
+      "A trendy pop culture themed room with posters and modern decor",
 };
+
+
+

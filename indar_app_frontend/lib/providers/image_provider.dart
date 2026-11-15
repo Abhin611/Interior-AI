@@ -12,3 +12,6 @@ class ImageProviderModel extends ChangeNotifier {
 
   XFile? get image => selectedImage;
 }
+
+
+

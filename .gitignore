@@ -1,12 +1,18 @@
-# Ignore the huge AI models and temporary data
-stable-diffusion-webui/models/
-stable-diffusion-webui/outputs/
-stable-diffusion-webui/repositories/
-stable-diffusion-webui/venv/
-
-# Ignore Python/Node artifacts
-__pycache__/
-node_modules/
+# Secrets
 .env
+*.env.local
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.db
+
+# AI model weights
 *.ckpt
 *.safetensors
+
+# Editors / OS
+.idea/
+.DS_Store
+node_modules/
