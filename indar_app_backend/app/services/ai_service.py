@@ -57,9 +57,11 @@ def _build_prompt(
     #   prompt only   -> the user's own words lead
     #   theme + prompt-> the user's words lead, the theme fills in the rest
     scene = theme_scene(theme)
-    items = ", ".join(short_name(p["product_name"]) for p in planned_products[:4])
+    # Product names only help when a theme is chosen; with a free-text prompt the
+    # user's words must lead, so unrelated product names are left out of the picture.
+    items = ", ".join(short_name(p["product_name"]) for p in planned_products[:4]) if scene else ""
     user = clip_words(user_prompt, 28)
-    base = "fully furnished and decorated room interior, photorealistic, detailed, warm lighting"
+    base = "living room furnished with a sofa, armchair, rug and coffee table, richly decorated, photorealistic, detailed, warm lighting"
 
     if user and scene:
         parts = [user, clip_words(scene, 16), items]
@@ -103,7 +105,7 @@ def _build_workflow(
     workflow["6"]["inputs"]["seed"] = uuid.uuid4().int % (2**32)
     # Strong enough to actually add furniture and decor to a plain room; the GPU
     # server keeps the room's walls, windows and floor in place with ControlNet.
-    workflow["6"]["inputs"]["denoise"] = 0.8
+    workflow["6"]["inputs"]["denoise"] = 0.85
     workflow["6"]["inputs"]["steps"] = 30
     workflow["6"]["inputs"]["cfg"] = 8
     workflow["6"]["inputs"]["controlnet_scale"] = 0.6

@@ -65,7 +65,7 @@ async def get_products_by_keywords(prompt: str, db: AsyncSession):
     for p in result.scalars().all():
         hay = f"{p.name} {p.category} {p.theme}".lower()
         score = sum(1 for w in words if w in hay)
-        if score:
+        if score >= 2:  # one shared word is too loose a match
             scored.append((score, random.random(), p))
     scored.sort(key=lambda t: (-t[0], t[1]))
     return _balanced([p for _, _, p in scored])
