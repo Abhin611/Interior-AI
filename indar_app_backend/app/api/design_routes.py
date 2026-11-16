@@ -18,12 +18,12 @@ from app.models.bundle import Bundle, BundleItem
 from app.models.product import Product
 from app.schemas.design_schema import DesignOut, GenerateDesignRequest
 from app.schemas.product_schema import BundleDetailOut
-from app.services.ai_service import analyze_room
+import asyncio
+import httpx
+from app.services.compose_service import compose_room, has_cutout
 from app.services.theme_hints import infer_theme, keywords
-from app.services.storage_service import get_3d_url
-from app.services.gpu_service import GpuOfflineError, gpu_status, gpu_offline_message
+from app.services.storage_service import get_3d_url, upload_image
 from app.services import progress
-from app.services.product_service import match_products_to_elements
 from app.services.bundle_service import create_bundle
 
 limiter = Limiter(key_func=get_remote_address)
@@ -31,44 +31,38 @@ limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/designs", tags=["Designs"])
 
 
-_QUOTA = {"Wall": 2, "Hanging": 2, "Floor": 3}
+_QUOTA = {"Wall": 2, "Hanging": 2, "Floor": 2}
 
 
-def _balanced(products):
-    # Spread the picks over wall / hanging / floor so the room is decorated
-    # everywhere, not only from the ceiling.
-    pool = list(products)
-    random.shuffle(pool)
+async def select_catalog_products(theme, prompt, db: AsyncSession):
+    # Products to put in the picture. Only products with a real cut-out qualify, so
+    # everything shown in the picture can be bought. Words in the prompt (for example
+    # "lights" or "gold") move matching products to the front; with no theme the
+    # prompt must match a product's name or it is not used.
+    query = select(Product).where(Product.is_active == True)
+    if theme:
+        query = query.where(Product.theme.ilike(theme))
+    candidates = [p for p in (await db.execute(query)).scalars().all() if has_cutout(p.asin)]
+
+    words = keywords(prompt)
+    scored = []
+    for p in candidates:
+        haystack = f"{p.name} {p.category} {p.theme}".lower()
+        scored.append((sum(1 for w in words if w in haystack), random.random(), p))
+    if not theme:
+        # No theme: the prompt alone must really match products (two shared words, or
+        # every word when it only has one), so "a blue sofa" does not return a random
+        # product that merely contains the word "blue".
+        needed = min(2, len(words))
+        scored = [t for t in scored if needed and t[0] >= needed]
+    scored.sort(key=lambda t: (-t[0], t[1]))
+
     counts, picked = {}, []
-    for p in pool:
+    for _, _, p in scored:  # spread over wall / hanging / floor
         if counts.get(p.category, 0) < _QUOTA.get(p.category, 1):
             picked.append(p)
             counts[p.category] = counts.get(p.category, 0) + 1
     return picked
-
-
-async def get_products_by_theme(theme: str, db: AsyncSession):
-    # Up to 7 active products for a theme, balanced across wall / hanging / floor.
-    result = await db.execute(
-        select(Product).where(Product.is_active == True, Product.theme.ilike(theme))
-    )
-    return _balanced(result.scalars().all())
-
-
-async def get_products_by_keywords(prompt: str, db: AsyncSession):
-    # Prompt-only mode: products whose name/category/theme mention the prompt's words.
-    words = keywords(prompt)
-    if not words:
-        return []
-    result = await db.execute(select(Product).where(Product.is_active == True))
-    scored = []
-    for p in result.scalars().all():
-        hay = f"{p.name} {p.category} {p.theme}".lower()
-        score = sum(1 for w in words if w in hay)
-        if score >= 2:  # one shared word is too loose a match
-            scored.append((score, random.random(), p))
-    scored.sort(key=lambda t: (-t[0], t[1]))
-    return _balanced([p for _, _, p in scored])
 
 
 @router.post("/generate", response_model=DesignOut, status_code=201)
@@ -80,9 +74,6 @@ async def generate_design(
     db: AsyncSession = Depends(get_db),   # ← used ONLY for pre-flight queries
     x_progress_id: str | None = Header(default=None),
 ):
-    # Fail fast (before any work) when the Colab GPU server is not running
-    if not (await gpu_status())["online"]:
-        raise HTTPException(status_code=503, detail=gpu_offline_message())
     user_id = current_user.user_id
 
     # -------------------------
@@ -120,13 +111,17 @@ async def generate_design(
             )
 
     # Step 3a: products to put in the picture (and later the bundle)
-    if effective_theme:
-        theme_products = await get_products_by_theme(effective_theme, db)
-    else:
-        theme_products = await get_products_by_keywords(body.user_prompt or "", db)
+    theme_products = await select_catalog_products(effective_theme, body.user_prompt, db)
+    if not theme_products:
+        raise HTTPException(
+            status_code=422,
+            detail="No products in our catalog match that yet. Pick a theme, or describe "
+                   "decor like lights, wreath, garland, rug or poster.",
+        )
     products_data = [
         {
             "product_id": p.product_id,
+            "asin": p.asin,
             "name": p.name,
             "category": p.category,
             "asset_3d_name": p.asset_3d_name,
@@ -151,22 +146,49 @@ async def generate_design(
     # -------------------------
     # PHASE 2: Slow generation — no DB connection held
     # -------------------------
+    # The picture is made by placing the REAL products into the user's own room photo
+    # (no AI drawing), so everything shown can be bought.
     try:
-        ai_result = await analyze_room(
-            image_url=room_image_url,
-            theme=effective_theme,
-            products=products_data,
-            user_prompt=body.user_prompt,
-            user_id=user_id,
-            progress_id=x_progress_id,
-        )
-    except GpuOfflineError:
-        progress.set_stage(user_id, x_progress_id, "failed")
-        raise HTTPException(status_code=503, detail=gpu_offline_message())
+        progress.set_stage(user_id, x_progress_id, "preparing")
+        async with httpx.AsyncClient(timeout=30) as client:
+            room_resp = await client.get(room_image_url)
+            room_resp.raise_for_status()
 
-    if not ai_result.get("design_image_url"):
+        progress.set_stage(user_id, x_progress_id, "composing")
+        items = [
+            {"asin": p["asin"], "category": p["category"], "name": p["name"]}
+            for p in products_data
+        ]
+        jpeg, placements = await asyncio.to_thread(compose_room, room_resp.content, items)
+
+        progress.set_stage(user_id, x_progress_id, "saving")
+        image_url = await upload_image(
+            content=jpeg, filename=f"design_{uuid.uuid4().hex[:6]}.jpg", user_id="ai"
+        )
+    except Exception as e:
+        logger.error(f"Composing the design failed: {e}")
         progress.set_stage(user_id, x_progress_id, "failed")
-        raise HTTPException(status_code=500, detail="Image generation failed.")
+        raise HTTPException(status_code=500, detail="Could not build the design picture. Please try again.")
+
+    by_asin = {p["asin"]: p for p in products_data}
+    z_by_category = {"Wall": 0.3, "Hanging": 0.0, "Floor": 0.6}
+    ai_result = {
+        "design_image_url": image_url,
+        "style": effective_theme or "custom",
+        "elements": [
+            {
+                "name": by_asin[pl["asin"]]["name"],
+                "category": pl["category"],
+                "pos_x": round((pl["cx"] - 0.5) * 1.6, 3),
+                "pos_y": round((1 - pl["cy"]) * 2.5, 3),
+                "pos_z": z_by_category.get(pl["category"], 0.3),
+                "product_id": by_asin[pl["asin"]]["product_id"],
+                "asset_3d_name": by_asin[pl["asin"]]["asset_3d_name"],
+                "product_theme": by_asin[pl["asin"]]["theme"],
+            }
+            for pl in placements
+        ],
+    }
 
     progress.set_stage(user_id, x_progress_id, "matching")
 

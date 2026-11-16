@@ -12,6 +12,7 @@ STAGES = {
     "preparing": (5, "Reading your room photo..."),
     "sending": (15, "Sending the photo to the AI server..."),
     "generating": (30, "AI is redecorating your room..."),
+    "composing": (45, "Placing real products in your room..."),
     "saving": (88, "Saving your new design..."),
     "matching": (94, "Picking matching products..."),
     "done": (100, "Done!"),
