@@ -30,21 +30,6 @@ class _ThemePageState extends State<ThemePage> {
 
   static const String _baseUrl = apiBaseUrl;
 
-  static const Map<String, String> _defaultPrompts = {
-    'Diwali':
-        'Decorate this room for Diwali with diyas, rangoli on the floor, marigold garlands, warm golden lighting, and traditional Indian festive elements. Keep the existing furniture and layout.',
-    'Christmas':
-        'Transform this room for Christmas with a decorated Christmas tree, fairy lights, stockings, wreaths, and a cozy winter atmosphere. Keep the existing furniture and layout.',
-    'Halloween':
-        'Decorate this room for Halloween with jack-o-lanterns, cobwebs, candles, spooky orange and purple lighting, and eerie decorations. Keep the existing furniture and layout.',
-    'Birthday':
-        'Transform this room into a birthday celebration space with colorful balloons, streamers, a cake table, and festive party decorations. Keep the existing furniture and layout.',
-    'Onam':
-        'Decorate this room for Onam festival with a pookalam flower arrangement on the floor, banana leaves, traditional Kerala lamps, and warm festive lighting. Keep the existing furniture and layout.',
-    'Pop-Culture':
-        'Transform this room with vibrant pop culture themed decorations, neon lighting, posters, and modern aesthetic elements. Keep the existing furniture and layout.',
-  };
-
   String _apiThemeName(String title) {
     const map = {
       'Diwali': 'Diwali',
@@ -58,8 +43,24 @@ class _ThemePageState extends State<ThemePage> {
   }
 
   void _onThemeSelected(String title) {
-    context.read<ThemeProviderModel>().setTheme(title, themes[title] ?? '');
-    _promptController.text = _defaultPrompts[title] ?? '';
+    final provider = context.read<ThemeProviderModel>();
+    if (provider.selectedTheme == title) {
+      provider.clear(); // tap again to un-select, e.g. to use only a prompt
+    } else {
+      provider.setTheme(title, themes[title] ?? '');
+    }
+  }
+
+  // A design needs a theme, a prompt, or both.
+  bool _canContinue(ThemeProviderModel t) =>
+      t.selectedTheme != null || _promptController.text.trim().isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _promptController.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -75,10 +76,10 @@ class _ThemePageState extends State<ThemePage> {
     final imageProvider =
         Provider.of<ImageProviderModel>(context, listen: false);
 
-    if (themeProvider.selectedTheme == null) {
+    if (!_canContinue(themeProvider)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Please select a theme first.'),
+            content: Text('Pick a theme, describe your room, or both.'),
             behavior: SnackBarBehavior.floating),
       );
       return;
@@ -104,7 +105,9 @@ class _ThemePageState extends State<ThemePage> {
       return;
     }
 
-    final themeName = _apiThemeName(themeProvider.selectedTheme!);
+    final String? themeName = themeProvider.selectedTheme == null
+        ? null
+        : _apiThemeName(themeProvider.selectedTheme!);
     final userPrompt = _promptController.text.trim();
 
     setState(() {
@@ -142,7 +145,7 @@ class _ThemePageState extends State<ThemePage> {
       );
       uploadRequest.headers['Authorization'] = 'Bearer $token';
       uploadRequest.fields['room_name'] =
-          '${themeProvider.selectedTheme} Room';
+          '${themeProvider.selectedTheme ?? 'Custom'} Room';
       uploadRequest.fields['type'] = 'living_room';
       uploadRequest.files.add(
         // fromBytes (not fromPath) so it also works on Flutter web, where
@@ -229,7 +232,7 @@ class _ThemePageState extends State<ThemePage> {
             builder: (_) => GeneratedPage(
               design: design,
               bundle: bundle,
-              themeName: themeProvider.selectedTheme!,
+              themeName: themeProvider.selectedTheme ?? 'Custom design',
             ),
           ),
         );
@@ -451,7 +454,7 @@ class _ThemePageState extends State<ThemePage> {
 
               const SizedBox(height: 6),
               Text(
-                'Select a theme to transform your room',
+                'Pick a theme, describe your room, or do both',
                 style: TextStyle(
                     fontSize: 13,
                     color: Colors.black.withOpacity(0.45)),
@@ -494,7 +497,7 @@ class _ThemePageState extends State<ThemePage> {
                             ),
 
                             // Editable prompt box
-                            if (themeProvider.selectedTheme != null) ...[
+                            ...[
                               const SizedBox(height: 16),
                               Container(
                                 padding: const EdgeInsets.all(14),
@@ -527,22 +530,16 @@ class _ThemePageState extends State<ThemePage> {
                                         ),
                                         const SizedBox(width: 10),
                                         const Text(
-                                            'Customize AI Prompt',
+                                            'Describe your room (optional)',
                                             style: TextStyle(
                                                 fontSize: 13,
                                                 fontWeight:
                                                     FontWeight.w600)),
                                         const Spacer(),
                                         GestureDetector(
-                                          onTap: () {
-                                            _promptController.text =
-                                                _defaultPrompts[
-                                                        themeProvider
-                                                            .selectedTheme!] ??
-                                                    '';
-                                          },
+                                          onTap: () => _promptController.clear(),
                                           child: Text(
-                                            'Reset',
+                                            'Clear',
                                             style: TextStyle(
                                                 fontSize: 11,
                                                 color: Colors.black
@@ -559,7 +556,7 @@ class _ThemePageState extends State<ThemePage> {
                                           fontSize: 13, height: 1.5),
                                       decoration: InputDecoration(
                                         hintText:
-                                            'Describe how you want your room decorated...',
+                                            'e.g. a cozy reading corner with plants, a sofa and warm lights...',
                                         hintStyle: TextStyle(
                                             fontSize: 12,
                                             color: Colors.black
@@ -577,8 +574,37 @@ class _ThemePageState extends State<ThemePage> {
                                       ),
                                     ),
                                     const SizedBox(height: 6),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: [
+                                        'More lights',
+                                        'Sofa and rug',
+                                        'Lots of plants',
+                                        'Modern and minimal',
+                                      ]
+                                          .map((t) => ActionChip(
+                                                label: Text(t,
+                                                    style: const TextStyle(
+                                                        fontSize: 11)),
+                                                backgroundColor:
+                                                    const Color(0xFFF1F1F1),
+                                                side: BorderSide.none,
+                                                onPressed: () {
+                                                  final cur =
+                                                      _promptController.text
+                                                          .trim();
+                                                  _promptController.text =
+                                                      cur.isEmpty
+                                                          ? t
+                                                          : '$cur, $t';
+                                                },
+                                              ))
+                                          .toList(),
+                                    ),
+                                    const SizedBox(height: 8),
                                     Text(
-                                      'Edit the prompt to customize your design. Tap Reset to restore default.',
+                                      'Theme only: we decorate it for you. Prompt only: we follow your words. Both: your words adjust the theme.',
                                       style: TextStyle(
                                           fontSize: 11,
                                           color: Colors.black
@@ -604,8 +630,7 @@ class _ThemePageState extends State<ThemePage> {
                   height: 55,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: _isGenerating ||
-                            themeProvider.selectedTheme == null
+                    color: _isGenerating || !_canContinue(themeProvider)
                         ? Colors.grey.shade300
                         : Colors.black,
                     borderRadius: BorderRadius.circular(30),
@@ -616,8 +641,7 @@ class _ThemePageState extends State<ThemePage> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: _isGenerating ||
-                                themeProvider.selectedTheme == null
+                        color: _isGenerating || !_canContinue(themeProvider)
                             ? Colors.black38
                             : Colors.white,
                       ),
