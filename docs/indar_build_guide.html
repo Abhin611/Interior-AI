@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Indar: how it was built</title>
+<style>
+@page { size: A4; margin: 20mm 18mm 20mm 18mm;
+  @top-left { content: "Indar: how it was built"; font: 9pt Segoe UI, Arial, sans-serif; color: #8a7f74; }
+  @bottom-center { content: counter(page); font: 9pt Segoe UI, Arial, sans-serif; color: #8a7f74; } }
+@page :first { @top-left { content: none; } @bottom-center { content: none; } }
+:root { --ink:#26211c; --mut:#6f655b; --acc:#a8542b; --acc2:#f6ece4; --line:#e3d8cc; --code:#2b2622; }
+* { box-sizing: border-box; }
+body { font: 10.5pt/1.5 "Segoe UI", Arial, sans-serif; color: var(--ink); margin: 0; }
+h1 { font-size: 22pt; color: var(--acc); margin: 0 0 10pt; padding-bottom: 6pt; border-bottom: 2px solid var(--acc); break-before: page; }
+h2 { font-size: 13pt; margin: 16pt 0 5pt; color: var(--ink); }
+h3 { font-size: 11pt; margin: 12pt 0 3pt; color: var(--acc); }
+p { margin: 0 0 7pt; }
+ul, ol { margin: 0 0 8pt; padding-left: 18pt; } li { margin-bottom: 3pt; }
+code { font-family: Consolas, "Courier New", monospace; font-size: 9pt; background: var(--acc2); padding: 0 3pt; border-radius: 2pt; }
+pre { background: var(--code); color: #f3e9dd; font: 8.6pt/1.45 Consolas, "Courier New", monospace; padding: 8pt 10pt; border-radius: 4pt; margin: 4pt 0 9pt; white-space: pre-wrap; break-inside: avoid; }
+table { border-collapse: collapse; width: 100%; margin: 4pt 0 10pt; font-size: 9.6pt; }
+th { background: var(--acc); color: #fff; text-align: left; padding: 4pt 6pt; }
+td { border-bottom: 1px solid var(--line); padding: 4pt 6pt; vertical-align: top; }
+tr { break-inside: avoid; }
+.note { background: var(--acc2); border-left: 3px solid var(--acc); padding: 6pt 9pt; margin: 6pt 0 10pt; break-inside: avoid; }
+.step { display: flex; gap: 8pt; margin: 0 0 6pt; break-inside: avoid; }
+.step b.n { flex: 0 0 16pt; height: 16pt; border-radius: 50%; background: var(--acc); color: #fff; text-align: center; font-size: 9pt; line-height: 16pt; }
+.step div { flex: 1; }
+.cover { height: 250mm; display: flex; flex-direction: column; justify-content: center; }
+.cover .brand { font-size: 44pt; font-weight: 700; color: var(--acc); letter-spacing: 3pt; }
+.cover .sub { font-size: 20pt; margin: 4pt 0 14pt; }
+.cover p.lead { font-size: 12pt; color: var(--mut); max-width: 150mm; }
+.cover table { width: 150mm; margin-top: 22pt; } .cover td:first-child { color: var(--mut); width: 32mm; }
+.toc { border-bottom: 1px solid var(--line); padding: 5pt 0; } .toc b { color: var(--acc); display: inline-block; width: 22pt; }
+.qa h3 { color: var(--ink); } .qa p { color: #3a332c; }
+.pagefirst h1 { break-before: auto; }
+</style></head><body>
+
+<div class="cover">
+  <div class="brand">INDAR</div>
+  <div class="sub">How it was built</div>
+  <p class="lead">A step-by-step guide to the app, how a room picture is made, and the build in the order it happened, written so the whole thing can be understood, explained and rebuilt without help.</p>
+  <table>
+    <tr><td>App</td><td>Indar (Interior AI), Flutter, FastAPI and Supabase</td></tr>
+    <tr><td>Code</td><td>github.com/Abhin611/Interior-AI (main)</td></tr>
+    <tr><td>Runs on</td><td>Web and Android from one Flutter codebase; backend on a PC (free hosting still to do)</td></tr>
+    <tr><td>Parts covered</td><td>1 Backend and data, 2 The Flutter app, 3 Pictures: the AI route and the move to real products, 4 Cut-outs and the catalog</td></tr>
+    <tr><td>Updated</td><td>16 November 2026</td></tr>
+  </table>
+</div>
+
+<h1>Contents</h1>
+<div class="toc"><b>1</b> What Indar is</div>
+<div class="toc"><b>2</b> The technology and why each piece was chosen</div>
+<div class="toc"><b>3</b> Getting a computer ready</div>
+<div class="toc"><b>4</b> Part 1: the backend and the data</div>
+<div class="toc"><b>5</b> Part 2: the Flutter app</div>
+<div class="toc"><b>6</b> Part 3: making the picture (AI first, then real products)</div>
+<div class="toc"><b>7</b> Part 4: cut-outs and growing the catalog</div>
+<div class="toc"><b>8</b> The routine for every change</div>
+<div class="toc"><b>9</b> The toughest problems, and how each was solved</div>
+<div class="toc"><b>10</b> Interview questions and how to answer them</div>
+<div class="toc"><b>11</b> Words used in Indar</div>
+<div class="note" style="margin-top:14pt"><b>How to use this guide.</b> Chapters 1 and 2 explain what the app is and the tools. Chapter 3 gets a PC ready. Chapters 4 to 7 follow the build in order, down to the commands typed. Chapter 8 is the routine for every change. Chapters 9 and 10 are for interviews: the hardest problems and ready answers.</div>
+
+<h1>1. What Indar is</h1>
+<p>Indar is a free app that redecorates a room for a festival or theme. You take a photo of your own room, pick a theme (Onam, Christmas, Diwali, Halloween, Birthday or Pop-Culture) or describe what you want in words, and the app shows your room with decor in it. Everything you see in the picture is a real product from a catalog of Amazon India listings, so the whole picture can be put in an Amazon cart in one tap. Each product also has a 3D model, so you can preview it in your room with AR before buying.</p>
+<h2>The main parts</h2>
+<table>
+<tr><th>Part</th><th>What it does</th></tr>
+<tr><td>Sign-in and profile</td><td>Email and password through Supabase Auth, with optional Google sign-in. The backend checks the Supabase token on every request.</td></tr>
+<tr><td>Rooms</td><td>Take or pick a photo of a room. It is stored in Supabase Storage and listed in the database.</td></tr>
+<tr><td>Theme or prompt</td><td>Three modes in one box: theme only, prompt only (for example "music posters and neon lights"), or both.</td></tr>
+<tr><td>Design generation</td><td>Picks real catalog products, places their cut-outs in your room photo, saves the picture and the list of what is in it. Shows real progress steps while it works.</td></tr>
+<tr><td>Result page</td><td>Shows the picture and the items in it, and lets you download it as a JPEG or PDF, edit the elements and open AR.</td></tr>
+<tr><td>Cart bundle</td><td>Builds an Amazon India add-to-cart link containing exactly the products shown in the picture, and logs the purchase.</td></tr>
+<tr><td>AR preview</td><td>Shows each product's .glb 3D model with <code>model_viewer_plus</code>.</td></tr>
+</table>
+<h2>The five principles every decision followed</h2>
+<div class="step"><b class="n">1</b><div><b>What you see is what you can buy.</b> No imaginary furniture. Anything in the picture must be in the cart. This one rule changed the whole design (chapter 6).</div></div>
+<div class="step"><b class="n">2</b><div><b>Free to use.</b> Every part runs on a free tier: Supabase free plan, Colab for the optional GPU, no paid servers.</div></div>
+<div class="step"><b class="n">3</b><div><b>Easy first.</b> One photo, one tap on a theme, and a result. The app tells the user plainly what it is doing and what went wrong.</div></div>
+<div class="step"><b class="n">4</b><div><b>Honest limits.</b> If the catalog has nothing for a request, the app says so instead of inventing something.</div></div>
+<div class="step"><b class="n">5</b><div><b>Testable without the real thing.</b> The AI server can be faked, the API can be called with a script, and the whole flow can be run on a laptop.</div></div>
+<h2>Where things stand</h2>
+<table>
+<tr><th>Part</th><th>What it delivered</th></tr>
+<tr><td>1</td><td>Backend on FastAPI and Supabase, 90 products with photos and 3D models, seed and storage scripts</td></tr>
+<tr><td>2</td><td>Flutter app: sign-in, rooms, themes, results, downloads, cart, AR; web fixes for upload and download</td></tr>
+<tr><td>3</td><td>AI pictures through a Colab GPU (img2img with ControlNet), then the move to placing real products</td></tr>
+<tr><td>4</td><td>Cut-outs for 31 of the 90 products, a compositor that places them, and a script to add more products</td></tr>
+</table>
+<p>The app is about 7,000 lines of Dart and 2,800 lines of Python. The code is public at github.com/Abhin611/Interior-AI on the main branch.</p>
+<div class="note"><b>Limits today.</b> Only 31 of the 90 products have a clean cut-out, so pictures are uneven: Halloween puts 6 items in a room, Pop-Culture 5, Christmas 2 and Diwali 1. The catalog has no real product sizes, so scale is estimated. AR, the camera and saving to the gallery need a phone to test and were not tested yet. The backend still runs on a PC.</div>
+
+<h1>2. The technology and why each piece was chosen</h1>
+<table>
+<tr><th>Piece</th><th>Used for</th><th>Why this one</th></tr>
+<tr><td>Flutter</td><td>The whole app</td><td>One codebase for web, Android, iOS and desktop.</td></tr>
+<tr><td>Provider</td><td>App state (theme, chosen image)</td><td>Small and simple; enough for this size of app.</td></tr>
+<tr><td>Supabase Auth</td><td>Sign-in</td><td>Free, handles email and Google, and gives the backend a signed token to verify.</td></tr>
+<tr><td>Supabase Postgres</td><td>All stored data</td><td>A real SQL database on a free plan, reached from Python with <code>asyncpg</code>.</td></tr>
+<tr><td>Supabase Storage</td><td>Room photos, design pictures, product photos, .glb models</td><td>A public bucket named <code>assets</code> gives each file a plain URL. 1 GB free is enough for about 1,500 products.</td></tr>
+<tr><td>FastAPI</td><td>The backend API</td><td>Fast to write, automatic docs at <code>/docs</code>, async from the start.</td></tr>
+<tr><td>SQLAlchemy (async)</td><td>Talking to the database</td><td>Models as Python classes; one place that knows the tables.</td></tr>
+<tr><td>slowapi</td><td>Rate limiting</td><td>Stops one user flooding the generator.</td></tr>
+<tr><td>Pillow and NumPy</td><td>Placing cut-outs in the room photo</td><td>Image maths in a few lines; no GPU needed.</td></tr>
+<tr><td>Dreamshaper 8 and diffusers</td><td>The first, AI way of drawing pictures</td><td>A good small Stable Diffusion model. Now optional.</td></tr>
+<tr><td>Google Colab and cloudflared</td><td>A free GPU for the AI route</td><td>Free T4 GPU; cloudflared gives it a public address.</td></tr>
+<tr><td>model_viewer_plus</td><td>AR preview</td><td>Shows .glb models and opens AR on a phone.</td></tr>
+<tr><td>pdf and gal</td><td>Downloads</td><td>Builds a PDF and saves pictures to the phone gallery.</td></tr>
+<tr><td>uv</td><td>Python packages and running scripts</td><td>Fast installs and <code>uv run</code> uses the locked versions.</td></tr>
+</table>
+<h2>How the code is organised</h2>
+<table>
+<tr><th>Folder</th><th>What lives there</th></tr>
+<tr><td>indar_app_backend/app/api</td><td>The routes: auth, rooms, designs, products, bundles, elements, AI status.</td></tr>
+<tr><td>indar_app_backend/app/models</td><td>The tables: users, rooms, themes, designs, design_elements, products, bundles, bundle_items, transactions.</td></tr>
+<tr><td>indar_app_backend/app/services</td><td>The logic: <code>compose_service.py</code> (places products), <code>storage_service.py</code>, <code>bundle_service.py</code>, <code>progress.py</code>, <code>theme_hints.py</code>, <code>gpu_service.py</code>, <code>ai_service.py</code>.</td></tr>
+<tr><td>indar_app_backend/scripts</td><td>build_dataset.py, setup_storage.py, make_cutouts.py, add_products.py.</td></tr>
+<tr><td>indar_app_backend/dataset</td><td>Product photos, .glb models and cut-outs, named by ASIN, one folder per theme.</td></tr>
+<tr><td>indar_app_frontend/lib/pages</td><td>Every screen: login, home, theme, generated result, edit elements, cart, AR.</td></tr>
+<tr><td>indar_app_frontend/lib/services</td><td><code>api_service.dart</code> and <code>auth_service.dart</code>, the only code that talks to the backend and Supabase.</td></tr>
+<tr><td>indar_app_frontend/lib/utils</td><td>File download for web and phone behind one import.</td></tr>
+<tr><td>gpu_server and colab</td><td>The optional image server and the notebook that runs it.</td></tr>
+</table>
+
+<h1>3. Getting a computer ready</h1>
+<p>These are the basic actions done once before any code was written. They are for Windows, which is what Indar was built on.</p>
+<div class="step"><b class="n">1</b><div>Install Git from git-scm.com. It also gives you Git Bash.</div></div>
+<div class="step"><b class="n">2</b><div>Install Python 3.12 or newer and <b>uv</b> (<code>pip install uv</code> or the installer from astral.sh).</div></div>
+<div class="step"><b class="n">3</b><div>Install the Flutter SDK, unzip it to a short path such as <code>C:\src\flutter</code> and add its <code>bin</code> folder to PATH. Run <code>flutter doctor</code> and fix what it reports.</div></div>
+<div class="step"><b class="n">4</b><div>Install Chrome (Flutter uses it for the web build) and, for Android, Android Studio with its SDK.</div></div>
+<div class="step"><b class="n">5</b><div>Create a free Supabase account, a GitHub account, and use a Google account for Colab.</div></div>
+<h2>Cloning and first run</h2>
+<pre>git clone https://github.com/Abhin611/Interior-AI
+cd Interior-AI/indar_app_backend
+cp .env.example .env     # fill in the Supabase values
+uv sync</pre>
+<div class="note"><b>Note.</b> Never paste the database password, the service key, the JWT secret or the GPU token into chat or commit them. They live only in <code>.env</code> (backend) and <code>env.json</code> (app), both kept out of git.</div>
+
+<h1>4. Part 1: the backend and the data</h1>
+<p>Goal: a working API with real accounts and a real product catalog before any screen exists, so every screen can be built against something true.</p>
+<h2>Step 1. Create the Supabase project</h2>
+<p>A new project gave three things: a <b>Project URL</b>, an <b>anon key</b> (safe to put in the app) and a <b>service_role key</b> (backend only). From <b>Connect</b> the <b>Session pooler</b> connection string was copied, because the direct connection does not work from many home networks. In <b>Authentication, Sign In / Providers, Email</b> the confirmation email was turned off for easy testing. In the JWT settings, the <b>legacy JWT secret</b> is what the backend uses to verify tokens.</p>
+<h2>Step 2. Fill in <code>.env</code></h2>
+<pre>SUPABASE_URL=...            SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_KEY=...    SUPABASE_JWT_SECRET=...
+DATABASE_URL=postgresql+asyncpg://...   # must start with postgresql+asyncpg://</pre>
+<h2>Step 3. Model the data</h2>
+<table>
+<tr><th>Table</th><th>Holds</th></tr>
+<tr><td>users</td><td>The signed-in person, synced from Supabase on first call.</td></tr>
+<tr><td>rooms</td><td>A user's room photo and its URL.</td></tr>
+<tr><td>themes</td><td>The six themes.</td></tr>
+<tr><td>products</td><td>90 products: ASIN, name, theme, category (Wall, Hanging or Floor), price, photo and 3D model names.</td></tr>
+<tr><td>designs</td><td>One generated picture for a room and a theme or prompt.</td></tr>
+<tr><td>design_elements</td><td>Which products are in a design and where.</td></tr>
+<tr><td>bundles and bundle_items</td><td>The cart: the products of one design.</td></tr>
+<tr><td>transactions</td><td>A log of purchases.</td></tr>
+<tr><td>app_config</td><td>Small settings, for example the GPU token and its current URL.</td></tr>
+</table>
+<h2>Step 4. Build the dataset</h2>
+<p><code>Dataset1.xlsx</code> lists 90 products across 6 themes. <code>scripts/build_dataset.py</code> downloads each product's photo from its Amazon.in listing and builds a simple AR model with that photo on it: a framed panel for wall items, a hanging card for hanging items and a standee for floor items. Files are named by ASIN.</p>
+<h2>Step 5. Load it</h2>
+<pre>uv run python -m app.database.seed         # creates the tables, loads 6 themes + 90 products
+uv run python scripts/setup_storage.py     # creates the public "assets" bucket, uploads dataset/
+uv run python main.py                      # http://localhost:8000, docs at /docs</pre>
+<h2>Step 6. The main routes</h2>
+<table>
+<tr><th>Method</th><th>Path</th><th>What it does</th></tr>
+<tr><td>GET</td><td>/health</td><td>Health check.</td></tr>
+<tr><td>GET</td><td>/api/auth/me</td><td>Verify the Supabase token and sync the user.</td></tr>
+<tr><td>POST, GET</td><td>/api/rooms/</td><td>Upload a room photo, list rooms.</td></tr>
+<tr><td>POST</td><td>/api/designs/generate</td><td>Make a design from a room and a theme or prompt.</td></tr>
+<tr><td>GET</td><td>/api/designs/progress/{id}</td><td>Real progress of a generation, polled by the app.</td></tr>
+<tr><td>GET</td><td>/api/designs/{id}/bundle</td><td>Products and the Amazon cart link.</td></tr>
+<tr><td>GET</td><td>/api/products/theme/{theme}</td><td>Products of a theme.</td></tr>
+<tr><td>POST</td><td>/api/products/bundles/{id}/purchase</td><td>Log the purchase and return the cart link.</td></tr>
+<tr><td>GET</td><td>/api/ai/status</td><td>Whether generation is available.</td></tr>
+</table>
+<p>Every <code>/api</code> route needs <code>Authorization: Bearer &lt;Supabase access token&gt;</code>. The backend verifies the token with the JWT secret, so a user cannot see another user's rooms.</p>
+<h2>Step 7. Test it with a script, not by hand</h2>
+<p>A small Python script signs in a test user with the Supabase client, then calls each route with <code>httpx</code> and prints the status codes. It was used again and again through the project (for example <code>catalog_test.py</code> runs every theme and prompt mode and checks that the cart equals what the picture shows).</p>
+
+<h1>5. Part 2: the Flutter app</h1>
+<p>Goal: a simple flow a stranger can follow: sign in, add a photo, pick a theme, see the result, buy or preview in AR.</p>
+<h2>Step 1. Create the project and the config</h2>
+<pre>cd indar_app_frontend
+cp env.example.json env.json     # SUPABASE_URL, SUPABASE_ANON_KEY, API_BASE_URL
+flutter pub get
+flutter run --dart-define-from-file=env.json</pre>
+<p><code>API_BASE_URL</code> is <code>http://10.0.2.2:8000</code> on the Android emulator. On a real phone on the same Wi-Fi it is the PC's address, for example <code>http://192.168.1.10:8000</code>.</p>
+<h2>Step 2. The screens</h2>
+<table>
+<tr><th>Page</th><th>Job</th></tr>
+<tr><td>onboarding, login, register</td><td>Welcome and sign-in. After sign-in the login page closes itself.</td></tr>
+<tr><td>home_page</td><td>Past designs and the start button.</td></tr>
+<tr><td>add_photo_page</td><td>Take a photo or pick one; uploads the room.</td></tr>
+<tr><td>theme_page</td><td>The prompt box and theme chips (theme only, prompt only, or both). Shows progress steps while generating.</td></tr>
+<tr><td>GeneratedPage</td><td>The result, the Download button (JPEG or PDF), edit and AR.</td></tr>
+<tr><td>edit_elements_page, elements_page</td><td>The products in a design.</td></tr>
+<tr><td>ar_view_page</td><td>The 3D model viewer and AR.</td></tr>
+<tr><td>cart_page</td><td>The bundle and the Amazon link.</td></tr>
+</table>
+<h2>Step 3. One place for network code</h2>
+<p><code>api_service.dart</code> is the only file that calls the backend, so errors are handled once. It turns problems into friendly messages: "AI is offline", "the backend is not running", or the exact reason from the server (for example "No products in our catalog match that yet"). Real progress is shown by polling <code>/api/designs/progress/{id}</code> with an <code>X-Progress-Id</code> header and updating a bar with stage names such as "Placing real products in your room...".</p>
+<h2>Step 4. Make web behave</h2>
+<p>The web build exposed three problems that the phone build hides. Each was fixed once and then checked in the browser:</p>
+<ul>
+<li><b>Upload.</b> <code>MultipartFile.fromPath</code> only works where <code>dart:io</code> exists. On the web the photo is sent from its bytes with <code>MultipartFile.fromBytes</code>.</li>
+<li><b>Login page staying open.</b> After sign-in the main gate switched pages, but the login page was still on the stack. <code>popUntil</code> now clears it, only on signed-in and signed-out events (not on token refresh).</li>
+<li><b>Download button.</b> It used to open the Amazon cart. It now opens a sheet asking JPEG or PDF. A web-only file (<code>file_download_web.dart</code>) saves through the browser; the phone version saves to the gallery.</li>
+</ul>
+<div class="note"><b>Tip.</b> Keep platform differences behind one import (<code>file_download.dart</code> picks the web or stub file). Screens never ask "am I on the web?".</div>
+
+<h1>6. Part 3: making the picture (AI first, then real products)</h1>
+<h2>The first idea: let AI redecorate the room</h2>
+<p>The first design drew the room with AI. The backend picked theme products, planned where each goes (wall, hanging, floor), and sent the room photo to a GPU server that ran Dreamshaper 8 image-to-image. The GPU server speaks the same API as ComfyUI, so a real ComfyUI could replace it.</p>
+<h3>Running the GPU for free</h3>
+<p><code>colab/Indar_GPU_Server.ipynb</code> starts <code>gpu_server/server.py</code> on a free Colab T4 and exposes it with <code>cloudflared</code>. The address changes every run, so the notebook registers it: it calls a SQL function <code>set_gpu_url(token, url)</code> in Supabase, and the backend reads the current address from the <code>app_config</code> table (cached for 10 seconds, with the <code>.env</code> value as a fallback). Nothing needs copying or restarting. A <code>INDAR_FAKE_GPU=1</code> switch returns a tinted copy of the photo for testing without a GPU.</p>
+<h3>Making the AI follow the room</h3>
+<p>Plain img2img either changed too little (the room looked the same) or too much (the room was lost). Several improvements were made: furniture words first in the prompt so they are not cut off, a stronger denoise, a ControlNet (canny edges) so the room's shape is kept while it is decorated, and a rule that the user's words stay in charge in prompt-only mode.</p>
+<h3>Why it was dropped as the main path</h3>
+<p>The pictures looked like a plain room with little visible decor, and, more important, the AI drew things that do not exist in the catalog. The requirement became: <b>anything portrayed in the image must be available to buy from the Amazon cart.</b> An AI that draws cannot promise that.</p>
+<h2>The answer: place real products in the room photo</h2>
+<p>The design endpoint no longer draws anything. It works like this:</p>
+<div class="step"><b class="n">1</b><div><b>Choose the theme.</b> The theme given, or one guessed from the prompt (<code>infer_theme</code> in <code>theme_hints.py</code>).</div></div>
+<div class="step"><b class="n">2</b><div><b>Select products.</b> <code>select_catalog_products</code> takes only products that have a cut-out, scores them against the prompt keywords, and takes up to two each for Wall, Hanging and Floor. With no theme it requires at least two keyword matches, so "a big blue sofa" does not match random blue items. If nothing matches, the API answers 422 with a clear message.</div></div>
+<div class="step"><b class="n">3</b><div><b>Compose.</b> <code>compose_room</code> pastes the cut-outs into the room photo (next section).</div></div>
+<div class="step"><b class="n">4</b><div><b>Save.</b> The picture is uploaded to Storage; a Design and its DesignElements are written; a bundle is created from exactly the products shown.</div></div>
+<div class="step"><b class="n">5</b><div><b>Report progress.</b> Stages preparing, composing, saving, matching and done are reported so the app's bar is real.</div></div>
+<h2>How the compositor places things</h2>
+<table>
+<tr><th>Step</th><th>What happens</th></tr>
+<tr><td>Find the floor</td><td>The photo is shrunk to 200 by 200 and averaged across the middle; the strongest brightness change between 45% and 86% of the height is taken as where the floor meets the back wall.</td></tr>
+<tr><td>Wall items</td><td>Spread along the back wall below 31% of the height, so hanging items never cover them.</td></tr>
+<tr><td>Hanging items</td><td>Hung from the ceiling on a thin string in the top band, small enough to end above the wall art.</td></tr>
+<tr><td>Floor items</td><td>Placed in front of the back wall, larger when nearer the camera, with a soft contact shadow. Rugs and mats (names containing rug, mat, carpet, rangoli) lie flat: wide and squashed for perspective.</td></tr>
+<tr><td>Small things</td><td>Names with topper, ornament, candle, diya, mini, bauble, star and the like are drawn small, because the catalog has no real sizes.</td></tr>
+<tr><td>Light and shadow</td><td>The product's brightness is matched to the room's, and a soft drop shadow is added.</td></tr>
+<tr><td>Same room, same layout</td><td>Random choices are seeded from the photo bytes, so the same room always gives the same picture.</td></tr>
+</table>
+<div class="note"><b>Trade-off.</b> The result is a collage of real products, not a painted scene. It is honest and buyable, but less pretty than AI art. This was a deliberate choice.</div>
+
+<h1>7. Part 4: cut-outs and growing the catalog</h1>
+<h2>What a cut-out is</h2>
+<p>A cut-out is a product photo with the background removed (a transparent PNG), so it can be pasted on a room photo. <code>scripts/make_cutouts.py</code> makes them and writes <code>dataset/&lt;theme&gt;/Cutout/&lt;ASIN&gt;.png</code> plus a list in <code>dataset/cutouts.json</code>.</p>
+<h2>How a clean cut-out is made</h2>
+<p>Many Amazon photos are a product on a plain white or light background. The script looks at the border of the photo; if at least 90% of it is a plain bright colour, it flood-fills that colour from the edges to make the background transparent. It then checks that the product takes between 5% and 88% of the picture and is not scattered. Photos that fail (for example a product in a lifestyle scene) get no cut-out and are never drawn.</p>
+<pre>cd indar_app_backend
+uv run python scripts/make_cutouts.py</pre>
+<h2>The rembg experiment</h2>
+<p><code>rembg</code> is a small AI model that removes backgrounds from any photo. It was tried and raised the cut-outs from 31 to 66 of 90 products after a manual review, but its results were rough on busy photos (torn edges, leftover furniture, a whole house). It was removed again; the app runs on the 31 clean cut-outs only. This is recorded here so nobody has to repeat the experiment without a reason.</p>
+<h2>Adding more products</h2>
+<p>More products mean fuller rooms. Supabase's free storage allows far more than 90 products (about 37 MB for 90, so around 1,500 fit in 1 GB). The blocker is data: Amazon blocks automated page fetching, so product details cannot be scraped. Two routes are ready:</p>
+<ul>
+<li>Put ASINs, theme and category in <code>scripts/new_products.csv</code> and save each product's photo as <code>scripts/new_photos/&lt;ASIN&gt;.jpg</code>. The CSV columns are <code>asin,theme,category[,price,name]</code>.</li>
+<li>Use Amazon Associates / the Product Advertising API for official product data.</li>
+</ul>
+<pre>uv run python scripts/add_products.py         # adds rows, builds jpg, glb and cut-out; keeps only clean cut-outs
+uv run python -m app.database.seed            # loads the new rows
+uv run python scripts/setup_storage.py        # uploads the new files</pre>
+<p>About 30 real ASINs found by web search are already in <code>new_products.csv</code> but none were added yet, because their photos could not be fetched.</p>
+
+<h1>8. The routine for every change</h1>
+<div class="step"><b class="n">1</b><div><b>Make one small change.</b> One idea per commit.</div></div>
+<div class="step"><b class="n">2</b><div><b>Test the backend with a script.</b> Restart uvicorn (it caches the cut-out list at start) and run the API test for every theme and prompt mode. Check the status codes and that the cart equals the picture.</div></div>
+<div class="step"><b class="n">3</b><div><b>Look at the result.</b> Open the produced picture. Counting items is not enough; check overlaps, sizes and where things sit.</div></div>
+<div class="step"><b class="n">4</b><div><b>Check the app in the browser.</b> Rebuild the web app only if Flutter code changed, then sign in, upload a photo, generate and download.</div></div>
+<div class="step"><b class="n">5</b><div><b>Commit and push.</b> A short message that says what changed and why. Commits show only the account owner as author.</div></div>
+<h2>Useful commands</h2>
+<pre>uv run uvicorn app.app:app --port 8000          # start the API
+uv run python -m app.database.seed              # (re)load themes and products
+flutter build web --dart-define-from-file=env.json
+python -m http.server 5000                      # serve build/web
+git add -A &amp;&amp; git commit -m "..." &amp;&amp; git push</pre>
+<h2>Windows gotchas that cost time</h2>
+<ul>
+<li>Run background servers with their input closed (<code>&lt; /dev/null</code>) or they can hang.</li>
+<li>To free a stuck port 8000 use PowerShell: <code>Get-NetTCPConnection -LocalPort 8000</code> then <code>Stop-Process</code>.</li>
+<li>Avoid long scripts with nested quotes in one shell line; write them to a file instead.</li>
+</ul>
+
+<h1>9. The toughest problems, and how each was solved</h1>
+<h2>1. "Imaginary" pictures</h2>
+<p><b>Symptom.</b> AI drew furniture and decor that were not in the catalog, or drew nothing visible.<br><b>Cause.</b> A generative model invents; it cannot be limited to a product list.<br><b>Fix.</b> Stop drawing. Paste real cut-outs into the user's photo, so the picture and the cart are the same list by construction.</p>
+<h2>2. The GPU server crashed on the scheduler</h2>
+<p><b>Symptom.</b> <code>ValueError</code> about <code>final_sigmas_type</code> from the DEIS scheduler.<br><b>Cause.</b> The model's saved scheduler config does not suit newer <code>diffusers</code>.<br><b>Fix.</b> Build the scheduler explicitly (DPM-Solver++, with <code>algorithm_type</code>, <code>solver_order</code> and <code>final_sigmas_type</code> set). The notebook had cached the old file, so Colab had to be re-run.</p>
+<h2>3. Upload failed on the web</h2>
+<p><b>Symptom.</b> "Unsupported operation: MultipartFile is only supported where dart:io is available".<br><b>Fix.</b> Send the photo as bytes with <code>MultipartFile.fromBytes</code>.</p>
+<h2>4. The login page did not close</h2>
+<p><b>Symptom.</b> After signing in the page stayed.<br><b>Fix.</b> <code>popUntil</code> on signed-in and signed-out events only. Popping on every auth event also popped pages during token refresh.</p>
+<h2>5. A patch went to the wrong function</h2>
+<p><b>Symptom.</b> A 500 error: <code>analyze_room() got an unexpected keyword argument 'user_id'</code>.<br><b>Cause.</b> A scripted edit added the new arguments to a different function with a similar signature.<br><b>Fix.</b> Correct both signatures. It was found only by running a real generation, which is why a real end-to-end test is part of the routine.</p>
+<h2>6. Prompt-only mode returned unrelated products</h2>
+<p><b>Symptom.</b> "a big blue sofa" returned items with "Blue" in their name.<br><b>Fix.</b> With no theme, require at least <code>min(2, number of words)</code> keyword matches; otherwise reply 422 with a friendly message.</p>
+<h2>7. Items overlapped and had silly sizes</h2>
+<p><b>Symptom.</b> Hanging items covered wall art, a rug was a thin line, a tree topper was bigger than a person.<br><b>Fix.</b> Separate vertical zones for hanging and wall items, a flat-item rule that only applies to wide pictures, and small-by-name rules.</p>
+<h2>8. Amazon blocked product page fetching</h2>
+<p><b>Symptom.</b> 29 of 30 new product pages could not be read.<br><b>Decision.</b> Do not work around the block. Add a route that uses the user's own saved photos, and name the official option (Associates API).</p>
+<h2>9. Too-rough cut-outs from the AI remover</h2>
+<p><b>Symptom.</b> rembg gave jagged edges and leftover objects.<br><b>Decision.</b> Remove it and keep only clean, plain-background cut-outs, accepting emptier rooms.</p>
+<h2>10. A tool that blocked a harmless command</h2>
+<p><b>Symptom.</b> A safety check blocked a pointless <code>rm</code> on a system path.<br><b>Lesson.</b> The block was right; the command had no purpose and was dropped.</p>
+
+<h1>10. Interview questions and how to answer them</h1>
+<div class="qa">
+<h3>What does Indar do, in one breath?</h3>
+<p>You photograph your room, pick a festival theme or describe what you want, and the app shows your room with real products from an Amazon catalog placed in it. You can put exactly those products in a cart or preview them in AR.</p>
+<h3>Why not just use AI image generation?</h3>
+<p>I tried it first, with Stable Diffusion and ControlNet on a free Colab GPU. It looked nice but drew things that could not be bought. The key requirement became that everything in the picture is a real catalog product, so I composite cut-outs of real products instead.</p>
+<h3>How do you guarantee the cart matches the picture?</h3>
+<p>The same list of products is used for both. The compositor receives the products and returns their placements; the bundle is built from those same product ids. An API test checks that the bundle equals what is shown.</p>
+<h3>How does the compositor decide where things go?</h3>
+<p>It finds the floor line from brightness changes in the photo, then uses three zones: wall art on the back wall, hanging items from the ceiling, floor items in front of the wall with shadows. Rugs lie flat, small items are drawn small, and a seed from the photo makes the layout repeatable.</p>
+<h3>Why Supabase?</h3>
+<p>Auth, Postgres and file storage in one free plan. The backend verifies the Supabase token, so I did not write my own login.</p>
+<h3>Why FastAPI?</h3>
+<p>It is quick to write, async, validates input with Pydantic and documents itself. Heavy image work runs in a thread (<code>asyncio.to_thread</code>) so the server stays responsive.</p>
+<h3>How is the app kept free to run?</h3>
+<p>Free Supabase plan, no paid GPU (the AI path is optional), cut-outs are made once ahead of time, and composing a picture takes a few seconds on a CPU.</p>
+<h3>How do you handle a request the catalog cannot serve?</h3>
+<p>The API replies 422 with a clear message such as "No products in our catalog match that yet", and the app shows it. It never invents a product.</p>
+<h3>How did you show real progress?</h3>
+<p>The backend stores the current stage in memory under a progress id. The app sends the id in a header and polls an endpoint, then moves a bar through stages with plain-language names.</p>
+<h3>What was your hardest bug?</h3>
+<p>A good answer is chapter 9, problem 5: a scripted patch changed the wrong function, the unit-style checks passed, and only a real end-to-end generation exposed it. That is why I always run a real request after a change.</p>
+<h3>What would you do next?</h3>
+<p>Host the backend for free, add many more products with clean photos so every theme fills a room, add real product sizes for correct scale, and test AR and the camera on a phone.</p>
+<h3>What are the limits you are honest about?</h3>
+<p>Only 31 of 90 products have clean cut-outs, so some themes are sparse; sizes are estimated; the picture is a collage rather than a painted scene; AR and gallery saving are not yet tested on a phone.</p>
+</div>
+
+<h1>11. Words used in Indar</h1>
+<table>
+<tr><th>Word</th><th>Meaning</th></tr>
+<tr><td>ASIN</td><td>Amazon's product code. Files are named by it.</td></tr>
+<tr><td>Catalog</td><td>The 90 products in the database, with photos and 3D models.</td></tr>
+<tr><td>Cut-out</td><td>A product photo with a transparent background.</td></tr>
+<tr><td>Compositor</td><td>The code that pastes cut-outs into the room photo.</td></tr>
+<tr><td>Bundle</td><td>The set of products of one design, as an Amazon cart link.</td></tr>
+<tr><td>Wall, Hanging, Floor</td><td>The three categories that decide where a product is placed.</td></tr>
+<tr><td>Theme</td><td>One of Onam, Christmas, Diwali, Halloween, Birthday, Pop-Culture.</td></tr>
+<tr><td>Supabase</td><td>The free service giving the database, sign-in and file storage.</td></tr>
+<tr><td>JWT</td><td>The signed token the app sends so the backend knows who you are.</td></tr>
+<tr><td>Anon key</td><td>A public Supabase key safe to ship in the app. The service key is not.</td></tr>
+<tr><td>Session pooler</td><td>The Supabase connection type that works from home networks.</td></tr>
+<tr><td>img2img</td><td>An AI image method that redraws a given photo.</td></tr>
+<tr><td>ControlNet</td><td>An add-on that makes img2img keep a photo's edges and layout.</td></tr>
+<tr><td>Colab</td><td>Google's free notebook service with a GPU.</td></tr>
+<tr><td>cloudflared</td><td>A tool that gives a local server a public web address.</td></tr>
+<tr><td>GLB</td><td>A 3D model file used for AR.</td></tr>
+<tr><td>AR</td><td>Augmented reality: showing the 3D model in your real room through the camera.</td></tr>
+<tr><td>Flood fill</td><td>Spreading from the photo edges through a plain colour to find the background.</td></tr>
+<tr><td>rembg</td><td>An AI background remover; tried, then removed.</td></tr>
+<tr><td>422</td><td>The HTTP status for "I understood you but cannot do that", used when the catalog has no match.</td></tr>
+<tr><td>uv</td><td>The Python tool used to install packages and run scripts.</td></tr>
+</table>
+</body></html>
