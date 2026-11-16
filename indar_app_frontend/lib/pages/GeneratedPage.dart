@@ -12,6 +12,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:gal/gal.dart'; // Modern library for gallery saving
 import 'package:pdf/widgets.dart' as pw;
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import '../utils/file_download.dart';
 
 
 
@@ -49,6 +51,29 @@ class _GeneratedPageState extends State<GeneratedPage> {
     return;
   }
 
+  // Let the user pick the format
+  final choice = await showModalBottomSheet<String>(
+    context: context,
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.image_outlined),
+            title: const Text('Save as image (JPEG)'),
+            onTap: () => Navigator.pop(ctx, 'jpg'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.picture_as_pdf_outlined),
+            title: const Text('Save as PDF'),
+            onTap: () => Navigator.pop(ctx, 'pdf'),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (choice == null) return;
+
   setState(() => _purchasing = true);
 
   try {
@@ -59,18 +84,25 @@ class _GeneratedPageState extends State<GeneratedPage> {
     );
     final Uint8List bytes = Uint8List.fromList(response.data);
 
-    // 2. Choose format (Showing JPEG logic here, see PDF logic below)
-    await _saveAsJpeg(bytes);
-    
-    _showSnack('Image saved to gallery!');
+    // 2. Save in the chosen format
+    if (choice == 'pdf') {
+      await _saveAsPdf(bytes);
+    } else {
+      await _saveAsJpeg(bytes);
+    }
   } catch (e) {
-    _showSnack('Download failed: $e');
+    _showSnack('Download failed. Please try again. ($e)');
   } finally {
     if (mounted) setState(() => _purchasing = false);
   }
 }
 
 Future<void> _saveAsJpeg(Uint8List bytes) async {
+  if (kIsWeb) {
+    await downloadBytes(bytes, 'indar_design.jpg', 'image/jpeg');
+    _showSnack('Image downloaded.');
+    return;
+  }
   // Get temporary directory to store the file before moving to gallery
   final tempDir = await getTemporaryDirectory();
   final file = File('${tempDir.path}/design_${DateTime.now().millisecondsSinceEpoch}.jpg');
@@ -78,6 +110,7 @@ Future<void> _saveAsJpeg(Uint8List bytes) async {
 
   // Save to Gallery
   await Gal.putImage(file.path);
+  _showSnack('Image saved to gallery!');
 }
 
 Future<void> _saveAsPdf(Uint8List bytes) async {
@@ -91,6 +124,12 @@ Future<void> _saveAsPdf(Uint8List bytes) async {
       ),
     ),
   );
+
+  if (kIsWeb) {
+    await downloadBytes(await pdf.save(), 'indar_design.pdf', 'application/pdf');
+    _showSnack('PDF downloaded.');
+    return;
+  }
 
   final output = await getApplicationDocumentsDirectory();
   final file = File("${output.path}/design_export.pdf");

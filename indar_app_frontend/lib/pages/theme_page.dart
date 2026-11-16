@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import '../config.dart';
 import 'dart:math';
@@ -21,6 +22,10 @@ class ThemePage extends StatefulWidget {
 class _ThemePageState extends State<ThemePage> {
   bool _isGenerating = false;
   String _status = '';
+  double _progress = 0; // 0..100, shown as a bar while generating
+  Timer? _pollTimer;
+  DateTime _stageStart = DateTime.now();
+  String _stage = '';
   final TextEditingController _promptController = TextEditingController();
 
   static const String _baseUrl = apiBaseUrl;
@@ -59,6 +64,7 @@ class _ThemePageState extends State<ThemePage> {
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     _promptController.dispose();
     super.dispose();
   }
@@ -103,10 +109,32 @@ class _ThemePageState extends State<ThemePage> {
 
     setState(() {
       _isGenerating = true;
-      _status = 'Uploading your room photo...';
+      _progress = 0;
+      _stage = '';
+      _status = 'Checking the AI server...';
     });
 
+    final progressId =
+        '${DateTime.now().microsecondsSinceEpoch}${Random().nextInt(99999)}';
+
     try {
+      // Step 0: is the Colab GPU server awake?
+      try {
+        final st = await http
+            .get(Uri.parse('$_baseUrl/api/ai/status'))
+            .timeout(const Duration(seconds: 15));
+        if (st.statusCode == 200 && jsonDecode(st.body)['online'] != true) {
+          throw _AiOfflineException();
+        }
+      } on _AiOfflineException {
+        rethrow;
+      } catch (_) {
+        // Could not even reach our own backend.
+        throw _BackendDownException();
+      }
+
+      setState(() => _status = 'Uploading your room photo...');
+
       // Step 1: Upload room photo
       final uploadRequest = http.MultipartRequest(
         'POST',
@@ -139,9 +167,13 @@ class _ThemePageState extends State<ThemePage> {
       final room = jsonDecode(uploadBody);
       final roomId = room['room_id'];
 
-      // Step 2: Generate design — 10 min timeout
-      setState(() =>
-          _status = 'AI is decorating your room...\nThis takes 2–3 minutes ☕');
+      // Step 2: Generate design — 10 min timeout. While it runs, ask the
+      // backend which step it is on every 2 seconds.
+      setState(() {
+        _progress = 8;
+        _status = 'Sending your photo to the AI...';
+      });
+      _startProgressPolling(token, progressId);
 
       final designResponse = await http
           .post(
@@ -149,6 +181,7 @@ class _ThemePageState extends State<ThemePage> {
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $token',
+              'X-Progress-Id': progressId,
             },
             body: jsonEncode({
               'room_id': roomId,
@@ -159,14 +192,21 @@ class _ThemePageState extends State<ThemePage> {
           )
           .timeout(const Duration(minutes: 10)); // ✅ 10 min timeout
 
+      _pollTimer?.cancel();
+
+      if (designResponse.statusCode == 503) {
+        throw _AiOfflineException();
+      }
       if (designResponse.statusCode != 201) {
-        throw Exception(
-            'Design generation failed: ${designResponse.body}');
+        throw Exception(_friendlyDetail(designResponse.body));
       }
       final design = jsonDecode(designResponse.body);
 
       // Step 3: Get bundle
-      setState(() => _status = 'Building your product bundle...');
+      setState(() {
+        _progress = 97;
+        _status = 'Building your product bundle...';
+      });
 
       final bundleResponse = await http
           .get(
@@ -194,19 +234,116 @@ class _ThemePageState extends State<ThemePage> {
           ),
         );
       }
-    } catch (e) {
-      print('Error: $e');
+    } on _AiOfflineException {
+      _pollTimer?.cancel();
       if (mounted) {
         setState(() => _isGenerating = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red.shade800,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        _showOfflineDialog();
+      }
+    } on _BackendDownException {
+      _pollTimer?.cancel();
+      if (mounted) {
+        setState(() => _isGenerating = false);
+        _showError(
+            'Cannot reach the Indar server. Make sure the backend is running and you are online, then try again.');
+      }
+    } on TimeoutException {
+      _pollTimer?.cancel();
+      if (mounted) {
+        setState(() => _isGenerating = false);
+        _showError('This is taking too long. Please try again in a minute.');
+      }
+    } catch (e) {
+      print('Error: $e');
+      _pollTimer?.cancel();
+      if (mounted) {
+        setState(() => _isGenerating = false);
+        _showError(e.toString().replaceFirst('Exception: ', ''));
       }
     }
+  }
+
+  void _startProgressPolling(String token, String progressId) {
+    _pollTimer?.cancel();
+    _stageStart = DateTime.now();
+    _stage = '';
+    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+      try {
+        final r = await http.get(
+          Uri.parse('$_baseUrl/api/designs/progress/$progressId'),
+          headers: {'Authorization': 'Bearer $token'},
+        ).timeout(const Duration(seconds: 5));
+        if (r.statusCode != 200 || !mounted || !_isGenerating) return;
+        final j = jsonDecode(r.body);
+        final stage = (j['stage'] ?? '') as String;
+        if (stage == 'unknown') return;
+        if (stage != _stage) {
+          _stage = stage;
+          _stageStart = DateTime.now();
+        }
+        final base = (j['percent'] as num).toDouble();
+        var pct = base;
+        if (stage == 'generating') {
+          // The GPU does not report steps, so ease from 30% towards 85%.
+          final t = DateTime.now().difference(_stageStart).inSeconds;
+          pct = 30 + 55 * (1 - exp(-t / 35));
+        }
+        setState(() {
+          if (pct > _progress) _progress = pct;
+          _status = j['message'] as String;
+        });
+      } catch (_) {
+        // A missed poll is fine; the next one will catch up.
+      }
+    });
+  }
+
+  String _friendlyDetail(String body) {
+    try {
+      final d = jsonDecode(body)['detail'];
+      if (d is String && d.isNotEmpty) return d;
+    } catch (_) {}
+    return 'Something went wrong while generating your design. Please try again.';
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red.shade800,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 6),
+      ),
+    );
+  }
+
+  void _showOfflineDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('The AI server is asleep'),
+        content: const Text(
+          'Your room photo is fine. The free GPU that redecorates it is not running right now.\n\n'
+          '1. Open the Indar Colab notebook\n'
+          '2. Press Runtime > Run all\n'
+          '3. Wait for "Registered with your Indar backend"\n'
+          '4. Come back here and tap Try again',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _handleContinue();
+            },
+            child: const Text('Try again'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildGeneratingState() {
@@ -216,6 +353,28 @@ class _ThemePageState extends State<ThemePage> {
         children: [
           _AnimatedRoomBuilder(status: _status),
           const SizedBox(height: 28),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 48),
+            child: Column(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: (_progress / 100).clamp(0.0, 1.0),
+                    minHeight: 6,
+                    backgroundColor: Colors.black12,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${_progress.round()}%',
+                  style: const TextStyle(fontSize: 12, color: Colors.black45),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Text(
@@ -874,3 +1033,7 @@ class _AnimatedRoomBuilderState extends State<_AnimatedRoomBuilder>
     );
   }
 }
+
+class _AiOfflineException implements Exception {}
+
+class _BackendDownException implements Exception {}
