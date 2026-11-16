@@ -556,7 +556,7 @@ class _ThemePageState extends State<ThemePage> {
                                           fontSize: 13, height: 1.5),
                                       decoration: InputDecoration(
                                         hintText:
-                                            'e.g. a cozy reading corner with plants, a sofa and warm lights...',
+                                            'e.g. music posters and neon lights (words that match our products)',
                                         hintStyle: TextStyle(
                                             fontSize: 12,
                                             color: Colors.black
@@ -578,10 +578,10 @@ class _ThemePageState extends State<ThemePage> {
                                       spacing: 6,
                                       runSpacing: 6,
                                       children: [
-                                        'More lights',
-                                        'Sofa and rug',
-                                        'Lots of plants',
-                                        'Modern and minimal',
+                                        'Fairy lights',
+                                        'Wall posters',
+                                        'Garland',
+                                        'Rug',
                                       ]
                                           .map((t) => ActionChip(
                                                 label: Text(t,
@@ -604,7 +604,7 @@ class _ThemePageState extends State<ThemePage> {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      'Theme only: we decorate it for you. Prompt only: we follow your words. Both: your words adjust the theme.',
+                                      'Everything in your picture is a real product you can buy. Theme only: we pick products for that theme. Prompt only: we find products matching your words. Both: your words choose which of the theme\'s products come first.',
                                       style: TextStyle(
                                           fontSize: 11,
                                           color: Colors.black
