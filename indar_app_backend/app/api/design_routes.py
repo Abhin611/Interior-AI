@@ -1,6 +1,6 @@
 import uuid
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -18,6 +18,8 @@ from app.models.product import Product
 from app.schemas.design_schema import DesignOut, GenerateDesignRequest
 from app.schemas.product_schema import BundleDetailOut
 from app.services.ai_service import analyze_room
+from app.services.gpu_service import GpuOfflineError, gpu_status, gpu_offline_message
+from app.services import progress
 from app.services.product_service import match_products_to_elements
 from app.services.bundle_service import create_bundle
 
@@ -46,7 +48,13 @@ async def generate_design(
     body: GenerateDesignRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),   # ← used ONLY for pre-flight queries
+    x_progress_id: str | None = Header(default=None),
 ):
+    # Fail fast (before any work) when the Colab GPU server is not running
+    if not (await gpu_status())["online"]:
+        raise HTTPException(status_code=503, detail=gpu_offline_message())
+    user_id = current_user.user_id
+
     # -------------------------
     # PHASE 1: Quick DB reads
     # Close this session before the 5-min generation starts
@@ -97,15 +105,24 @@ async def generate_design(
     # -------------------------
     # PHASE 2: Slow generation — no DB connection held
     # -------------------------
-    ai_result = await analyze_room(
-        image_url=room_image_url,
-        theme=body.theme_name,
-        products=products_data,
-        user_prompt=body.user_prompt,
-    )
+    try:
+        ai_result = await analyze_room(
+            image_url=room_image_url,
+            theme=body.theme_name,
+            products=products_data,
+            user_prompt=body.user_prompt,
+            user_id=user_id,
+            progress_id=x_progress_id,
+        )
+    except GpuOfflineError:
+        progress.set_stage(user_id, x_progress_id, "failed")
+        raise HTTPException(status_code=503, detail=gpu_offline_message())
 
     if not ai_result.get("design_image_url"):
+        progress.set_stage(user_id, x_progress_id, "failed")
         raise HTTPException(status_code=500, detail="Image generation failed.")
+
+    progress.set_stage(user_id, x_progress_id, "matching")
 
     # -------------------------
     # PHASE 3: Fresh DB session for all writes
@@ -164,7 +181,17 @@ async def generate_design(
             .where(Design.design_id == design.design_id)
             .options(selectinload(Design.elements))
         )
+        progress.set_stage(user_id, x_progress_id, "done")
         return result.scalar_one()
+
+
+@router.get("/progress/{progress_id}")
+async def generation_progress(
+    progress_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    # Current step of a running generation (poll every couple of seconds)
+    return progress.get_stage(current_user.user_id, progress_id)
 
 
 @router.get("/room/{room_id}", response_model=List[DesignOut])

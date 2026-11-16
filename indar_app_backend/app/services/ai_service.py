@@ -6,6 +6,8 @@ from typing import Optional
 from loguru import logger
 from pathlib import Path
 from app.core.settings import settings
+from app.services.gpu_service import get_gpu_url, GpuOfflineError, is_transport_problem
+from app.services import progress
 
 # Resolve relative to the backend root so it works from any working directory
 WORKFLOW_PATH = Path(__file__).resolve().parents[2] / "img2img_workflow.json"
@@ -28,9 +30,10 @@ async def _download_image(url: str) -> bytes:
 async def _upload_to_comfyui(image_bytes: bytes) -> str:
     filename = f"room_{uuid.uuid4().hex[:8]}.jpg"
 
+    base = await get_gpu_url()
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(
-            f"{settings.COMFYUI_URL}/upload/image",
+            f"{base}/upload/image",
             files={"image": (filename, image_bytes, "image/jpeg")},
             data={"type": "input", "overwrite": "true"},
         )
@@ -106,9 +109,10 @@ def _build_workflow(
 # =========================
 
 async def _queue_workflow(workflow: dict) -> str:
+    base = await get_gpu_url()
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(
-            f"{settings.COMFYUI_URL}/prompt",
+            f"{base}/prompt",
             json={"prompt": workflow, "client_id": str(uuid.uuid4())},
         )
         resp.raise_for_status()
@@ -117,6 +121,8 @@ async def _queue_workflow(workflow: dict) -> str:
 
 async def _wait_for_image(prompt_id: str) -> Optional[bytes]:
     elapsed = 0
+    failures = 0
+    base = await get_gpu_url()
 
     async with httpx.AsyncClient(timeout=30) as client:
         while elapsed < POLL_TIMEOUT:
@@ -124,8 +130,9 @@ async def _wait_for_image(prompt_id: str) -> Optional[bytes]:
             elapsed += POLL_INTERVAL
 
             try:
-                resp = await client.get(f"{settings.COMFYUI_URL}/history/{prompt_id}")
+                resp = await client.get(f"{base}/history/{prompt_id}")
                 resp.raise_for_status()
+                failures = 0
                 history = resp.json()
 
                 if prompt_id not in history:
@@ -138,7 +145,7 @@ async def _wait_for_image(prompt_id: str) -> Optional[bytes]:
                         img = images[0]
 
                         img_resp = await client.get(
-                            f"{settings.COMFYUI_URL}/view",
+                            f"{base}/view",
                             params={
                                 "filename": img["filename"],
                                 "subfolder": img.get("subfolder", ""),
@@ -150,6 +157,10 @@ async def _wait_for_image(prompt_id: str) -> Optional[bytes]:
 
             except Exception as e:
                 logger.warning(f"Polling error: {e}")
+                if is_transport_problem(e):
+                    failures += 1
+                    if failures >= 3:
+                        raise GpuOfflineError("GPU server stopped answering") from e
 
     return None
 
@@ -163,10 +174,14 @@ async def _generate_with_comfyui(
     theme: str,
     planned_products: list,
     user_prompt: Optional[str] = None,
+    user_id=None,
+    progress_id: Optional[str] = None,
 ) -> Optional[str]:
 
     try:
+        progress.set_stage(user_id, progress_id, "preparing")
         image_bytes = await _download_image(image_url)
+        progress.set_stage(user_id, progress_id, "sending")
         input_name = await _upload_to_comfyui(image_bytes)
 
         workflow = _build_workflow(
@@ -177,10 +192,13 @@ async def _generate_with_comfyui(
         )
 
         prompt_id = await _queue_workflow(workflow)
+        progress.set_stage(user_id, progress_id, "generating")
         result = await _wait_for_image(prompt_id)
 
         if not result:
             return None
+
+        progress.set_stage(user_id, progress_id, "saving")
 
         from app.services.storage_service import upload_image
 
@@ -190,7 +208,12 @@ async def _generate_with_comfyui(
             user_id="ai"
         )
 
+    except GpuOfflineError:
+        raise
     except Exception as e:
+        if is_transport_problem(e):
+            logger.error(f"GPU server unreachable: {e}")
+            raise GpuOfflineError(str(e)) from e
         logger.error(f"Generation failed: {e}")
         return None
 
@@ -248,6 +271,8 @@ async def analyze_room(
     theme: Optional[str] = None,
     products: Optional[list] = None,
     user_prompt: Optional[str] = None,
+    user_id=None,
+    progress_id: Optional[str] = None,
 ) -> dict:
 
     theme = theme or "festive"
@@ -262,6 +287,8 @@ async def analyze_room(
         theme=theme,
         planned_products=planned,
         user_prompt=user_prompt,
+        user_id=user_id,
+        progress_id=progress_id,
     )
 
     # ✅ FIX: elements were missing

@@ -8,7 +8,7 @@ from loguru import logger
 
 from app.core.settings import settings
 from app.api.router import api_router
-from app.database.db import init_db
+from app.database.db import init_db, init_app_config
 
 # ⚠️ Import ALL models here so init_db() sees every table
 from app.models import user, room, design, product, bundle  # noqa
@@ -17,6 +17,7 @@ from app.models import user, room, design, product, bundle  # noqa
 async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.APP_NAME}")
     await init_db()
+    await init_app_config()
     yield
     logger.info("Shutting down.")
 

@@ -79,8 +79,10 @@ Image generation needs a GPU. The notebook runs it free on Google Colab:
 
 1. Open [`colab/Indar_GPU_Server.ipynb` in Colab](https://colab.research.google.com/github/Abhin611/Interior-AI/blob/main/colab/Indar_GPU_Server.ipynb).
 2. **Runtime → Change runtime type → T4 GPU**, then **Runtime → Run all** (about 3–4 minutes the first time).
-3. Copy the printed `COMFYUI_URL=https://....trycloudflare.com` line into `indar_app_backend/.env` and restart the backend.
-4. Keep the Colab tab open while using the app.
+3. Wait for `Registered with your Indar backend`. The notebook tells the backend its new URL through your Supabase project, so there is nothing to copy and no restart.
+4. Keep the Colab tab open while using the app. If it is closed, the app shows "The AI server is asleep" with these steps.
+
+**One-time Colab setup:** add three Colab Secrets (key icon, Notebook access on): `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `GPU_TOKEN`. The token is created in your database the first time the backend starts: read it with `select value from app_config where key = 'gpu_token';` in the Supabase SQL editor. Without the secrets the notebook still prints a `COMFYUI_URL=...` line to paste into `indar_app_backend/.env`.
 
 No GPU? `INDAR_FAKE_GPU=1` makes `gpu_server` return a tinted copy of the photo, which is handy for testing the rest of the app:
 
