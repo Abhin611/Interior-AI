@@ -1,5 +1,6 @@
 import uuid
 from typing import List
+import random
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -18,6 +19,8 @@ from app.models.product import Product
 from app.schemas.design_schema import DesignOut, GenerateDesignRequest
 from app.schemas.product_schema import BundleDetailOut
 from app.services.ai_service import analyze_room
+from app.services.theme_hints import infer_theme, keywords
+from app.services.storage_service import get_3d_url
 from app.services.gpu_service import GpuOfflineError, gpu_status, gpu_offline_message
 from app.services import progress
 from app.services.product_service import match_products_to_elements
@@ -28,17 +31,44 @@ limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/designs", tags=["Designs"])
 
 
+_QUOTA = {"Wall": 2, "Hanging": 2, "Floor": 3}
+
+
+def _balanced(products):
+    # Spread the picks over wall / hanging / floor so the room is decorated
+    # everywhere, not only from the ceiling.
+    pool = list(products)
+    random.shuffle(pool)
+    counts, picked = {}, []
+    for p in pool:
+        if counts.get(p.category, 0) < _QUOTA.get(p.category, 1):
+            picked.append(p)
+            counts[p.category] = counts.get(p.category, 0) + 1
+    return picked
+
+
 async def get_products_by_theme(theme: str, db: AsyncSession):
-    """Get up to 5 active products for a theme to build AI prompt."""
+    # Up to 7 active products for a theme, balanced across wall / hanging / floor.
     result = await db.execute(
-        select(Product)
-        .where(
-            Product.is_active == True,
-            Product.theme.ilike(theme),
-        )
-        .limit(5)
+        select(Product).where(Product.is_active == True, Product.theme.ilike(theme))
     )
-    return result.scalars().all()
+    return _balanced(result.scalars().all())
+
+
+async def get_products_by_keywords(prompt: str, db: AsyncSession):
+    # Prompt-only mode: products whose name/category/theme mention the prompt's words.
+    words = keywords(prompt)
+    if not words:
+        return []
+    result = await db.execute(select(Product).where(Product.is_active == True))
+    scored = []
+    for p in result.scalars().all():
+        hay = f"{p.name} {p.category} {p.theme}".lower()
+        score = sum(1 for w in words if w in hay)
+        if score:
+            scored.append((score, random.random(), p))
+    scored.sort(key=lambda t: (-t[0], t[1]))
+    return _balanced([p for _, _, p in scored])
 
 
 @router.post("/generate", response_model=DesignOut, status_code=201)
@@ -73,34 +103,50 @@ async def generate_design(
     if not room.image_url:
         raise HTTPException(status_code=422, detail="Room has no uploaded image.")
 
-    # Step 2: resolve theme
-    result = await db.execute(
-        select(Theme).where(Theme.theme_name.ilike(body.theme_name))
-    )
-    theme = result.scalar_one_or_none()
-    if not theme:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Theme '{body.theme_name}' not found. "
-                   f"Available: onam, Christmas, Diwali, Halloween, Birthday, Pop-Culture"
+    # Step 2: resolve the request mode
+    #   theme only | prompt only | theme + prompt
+    effective_theme = body.theme_name or infer_theme(body.user_prompt)
+    theme = None
+    if effective_theme:
+        result = await db.execute(
+            select(Theme).where(Theme.theme_name.ilike(effective_theme))
         )
+        theme = result.scalar_one_or_none()
+        if not theme and body.theme_name:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Theme '{body.theme_name}' not found. "
+                       f"Available: onam, Christmas, Diwali, Halloween, Birthday, Pop-Culture"
+            )
 
-    # Step 3a: get theme products for AI prompt
-    theme_products = await get_products_by_theme(body.theme_name, db)
+    # Step 3a: products to put in the picture (and later the bundle)
+    if effective_theme:
+        theme_products = await get_products_by_theme(effective_theme, db)
+    else:
+        theme_products = await get_products_by_keywords(body.user_prompt or "", db)
     products_data = [
-        {"name": p.name, "category": p.category}
+        {
+            "product_id": p.product_id,
+            "name": p.name,
+            "category": p.category,
+            "asset_3d_name": p.asset_3d_name,
+            "theme": p.theme,
+        }
         for p in theme_products
     ]
 
     # Capture everything we need as plain values before closing the session
     room_id = room.room_id
     room_image_url = room.image_url
-    theme_id = theme.theme_id
+    theme_id = theme.theme_id if theme else None
 
     # ✅ Explicitly close the dependency session — don't hold it during generation
     await db.close()
 
-    logger.info(f"Using {len(products_data)} products for AI prompt: {body.theme_name}")
+    logger.info(
+        f"Mode: theme={body.theme_name!r} prompt={bool(body.user_prompt)} "
+        f"(effective theme={effective_theme!r}) with {len(products_data)} products"
+    )
 
     # -------------------------
     # PHASE 2: Slow generation — no DB connection held
@@ -108,7 +154,7 @@ async def generate_design(
     try:
         ai_result = await analyze_room(
             image_url=room_image_url,
-            theme=body.theme_name,
+            theme=effective_theme,
             products=products_data,
             user_prompt=body.user_prompt,
             user_id=user_id,
@@ -134,7 +180,7 @@ async def generate_design(
             design = Design(
                 room_id=room_id,
                 theme_id=theme_id,
-                style=ai_result.get("style", body.theme_name),
+                style=ai_result.get("style", effective_theme or "custom"),
                 design_image_url=ai_result.get("design_image_url"),
             )
             fresh_db.add(design)
@@ -150,28 +196,29 @@ async def generate_design(
                     pos_x=el.get("pos_x"),
                     pos_y=el.get("pos_y"),
                     pos_z=el.get("pos_z"),
+                    product_id=el.get("product_id"),
+                    asset_3d_name=get_3d_url(
+                        el.get("asset_3d_name"), el.get("product_theme")
+                    ),
                 )
                 fresh_db.add(element)
                 elements.append(element)
 
             await fresh_db.flush()
 
-            # Step 6: match products + create bundle
-            if elements:
+            # Step 6: bundle of exactly the products shown in the design
+            product_ids = {el.product_id for el in elements if el.product_id}
+            if product_ids:
                 try:
-                    matched_products = await match_products_to_elements(
-                        elements=elements,
-                        theme=body.theme_name,
-                        db=fresh_db,
+                    prod_rows = await fresh_db.execute(
+                        select(Product).where(Product.product_id.in_(product_ids))
                     )
-                    await fresh_db.flush()
-
-                    if matched_products:
+                    bundle_products = list(prod_rows.scalars().all())
+                    if bundle_products:
                         await create_bundle(
-                            design, matched_products, str(current_user.user_id), fresh_db
+                            design, bundle_products, str(current_user.user_id), fresh_db
                         )
-                        logger.info(f"Bundle created with {len(matched_products)} products")
-
+                        logger.info(f"Bundle created with {len(bundle_products)} products")
                 except Exception as e:
                     logger.warning(f"Bundle creation skipped: {e}")
 

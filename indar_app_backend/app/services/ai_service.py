@@ -8,6 +8,7 @@ from pathlib import Path
 from app.core.settings import settings
 from app.services.gpu_service import get_gpu_url, GpuOfflineError, is_transport_problem
 from app.services import progress
+from app.services.theme_hints import theme_scene, short_name, clip_words
 
 # Resolve relative to the backend root so it works from any working directory
 WORKFLOW_PATH = Path(__file__).resolve().parents[2] / "img2img_workflow.json"
@@ -46,31 +47,31 @@ async def _upload_to_comfyui(image_bytes: bytes) -> str:
 # =========================
 
 def _build_prompt(
-    theme: str,
+    theme: Optional[str],
     planned_products: list,
     user_prompt: Optional[str] = None,
 ) -> tuple[str, str]:
+    # Stable Diffusion only reads the first ~75 tokens, so keep it short and put
+    # the important words first. Three modes:
+    #   theme only    -> a rich description of that theme's decorated room
+    #   prompt only   -> the user's own words lead
+    #   theme + prompt-> the user's words lead, the theme fills in the rest
+    scene = theme_scene(theme)
+    items = ", ".join(short_name(p["product_name"]) for p in planned_products[:4])
+    user = clip_words(user_prompt, 28)
+    base = "fully furnished and decorated room interior, photorealistic, detailed, warm lighting"
 
-    context_names = [p["product_name"] for p in planned_products]
-
-    placement_text = [
-        f"{p['product_name']} at x={p['pos_x']}, y={p['pos_y']}, z={p['pos_z']}"
-        for p in planned_products
-    ]
-
-    positive = (
-        f"same exact room, no structural changes, "
-        f"decorate for {theme}, "
-        f"use ONLY: {', '.join(context_names)}, "
-        f"place EXACTLY: {', '.join(placement_text)}, "
-        f"correct scale, realistic, no floating objects, "
-        f"perfect perspective, photorealistic"
-        + (f", {user_prompt}" if user_prompt else "")
-    )
+    if user and scene:
+        parts = [user, clip_words(scene, 16), items]
+    elif user:
+        parts = [user, items]
+    else:
+        parts = [scene or "festive home decor", items]
+    positive = ", ".join([p for p in parts if p] + [base])
 
     negative = (
-        "extra objects, wrong placement, floating decor, "
-        "bad perspective, blurry, low quality"
+        "empty room, bare walls, blurry, low quality, deformed, text, watermark, "
+        "people, floating objects, bad perspective"
     )
 
     return positive, negative
@@ -82,7 +83,7 @@ def _build_prompt(
 
 def _build_workflow(
     input_image_name: str,
-    theme: str,
+    theme: Optional[str],
     planned_products: list,
     user_prompt: Optional[str] = None,
 ) -> dict:
@@ -100,6 +101,12 @@ def _build_workflow(
     workflow["3"]["inputs"]["text"] = positive
     workflow["5"]["inputs"]["text"] = negative
     workflow["6"]["inputs"]["seed"] = uuid.uuid4().int % (2**32)
+    # Strong enough to actually add furniture and decor to a plain room; the GPU
+    # server keeps the room's walls, windows and floor in place with ControlNet.
+    workflow["6"]["inputs"]["denoise"] = 0.8
+    workflow["6"]["inputs"]["steps"] = 30
+    workflow["6"]["inputs"]["cfg"] = 8
+    workflow["6"]["inputs"]["controlnet_scale"] = 0.6
 
     return workflow
 
@@ -233,6 +240,9 @@ def _plan_layout(products: list) -> list:
     for i, p in enumerate(wall[:5]):
         planned.append({
             "product_name": p["name"],
+            "product_id": p.get("product_id"),
+            "asset_3d_name": p.get("asset_3d_name"),
+            "product_theme": p.get("theme"),
             "category": "Wall",
             "pos_x": -0.6 + i * (1.2 / max(1, len(wall))),
             "pos_y": 1.5,
@@ -243,6 +253,9 @@ def _plan_layout(products: list) -> list:
     for i, p in enumerate(hanging[:4]):
         planned.append({
             "product_name": p["name"],
+            "product_id": p.get("product_id"),
+            "asset_3d_name": p.get("asset_3d_name"),
+            "product_theme": p.get("theme"),
             "category": "Hanging",
             "pos_x": -0.5 + i * (1.0 / max(1, len(hanging))),
             "pos_y": 2.2,
@@ -253,6 +266,9 @@ def _plan_layout(products: list) -> list:
     for i, p in enumerate(floor[:6]):
         planned.append({
             "product_name": p["name"],
+            "product_id": p.get("product_id"),
+            "asset_3d_name": p.get("asset_3d_name"),
+            "product_theme": p.get("theme"),
             "category": "Floor",
             "pos_x": -0.7 + i * (1.4 / max(1, len(floor))),
             "pos_y": 0.0,
@@ -275,7 +291,7 @@ async def analyze_room(
     progress_id: Optional[str] = None,
 ) -> dict:
 
-    theme = theme or "festive"
+    theme = theme or None
     products = products or []
 
     # PLAN
@@ -295,6 +311,9 @@ async def analyze_room(
     elements = [
         {
             "name": p["product_name"],
+            "product_id": p.get("product_id"),
+            "asset_3d_name": p.get("asset_3d_name"),
+            "product_theme": p.get("product_theme"),
             "category": p["category"],
             "pos_x": p["pos_x"],
             "pos_y": p["pos_y"],
@@ -305,6 +324,6 @@ async def analyze_room(
 
     return {
         "design_image_url": design_url,
-        "style": theme,
+        "style": theme or "custom",
         "elements": elements,
     }

@@ -64,7 +64,7 @@ APP_CONFIG_SQL = [
          if p_token is null or p_token <> (select value from app_config where key = 'gpu_token') then
            raise exception 'invalid token';
          end if;
-         if p_url !~ '^https://[a-z0-9-]+\.trycloudflare\.com$' then
+         if p_url !~ '^https://[a-z0-9-]+\\.trycloudflare\\.com$' then
            raise exception 'invalid url';
          end if;
          insert into app_config (key, value, updated_at) values ('gpu_url', p_url, now())

@@ -25,6 +25,9 @@ from fastapi.responses import FileResponse
 from PIL import Image, ImageDraw, ImageEnhance
 
 MODEL_ID = os.getenv("INDAR_MODEL", "Lykon/dreamshaper-8")
+# ControlNet keeps the room's walls, windows and floor in place while the model
+# adds furniture and decor. Set INDAR_CONTROLNET=off to use plain img2img.
+CONTROLNET_ID = os.getenv("INDAR_CONTROLNET", "lllyasviel/control_v11p_sd15_canny")
 FAKE = os.getenv("INDAR_FAKE_GPU") == "1"
 MAX_SIDE = int(os.getenv("INDAR_MAX_SIDE", "768"))
 
@@ -37,19 +40,35 @@ app = FastAPI(title="Indar GPU server")
 jobs: dict[str, dict] = {}          # prompt_id -> {"status": ..., "file": ..., "error": ...}
 work: "queue.Queue[tuple[str, dict]]" = queue.Queue()
 _pipe = None
+_cn_ok = False   # True when the ControlNet pipeline loaded
 
 
 # ── Model ─────────────────────────────────────────────────────────────────
 
 def get_pipe():
-    global _pipe
+    global _pipe, _cn_ok
     if _pipe is None:
         import torch
-        from diffusers import DPMSolverMultistepScheduler, StableDiffusionImg2ImgPipeline
+        from diffusers import DPMSolverMultistepScheduler
 
-        pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
-            MODEL_ID, torch_dtype=torch.float16, variant="fp16", safety_checker=None
-        )
+        pipe = None
+        if CONTROLNET_ID.lower() != "off":
+            try:
+                from diffusers import ControlNetModel, StableDiffusionControlNetImg2ImgPipeline
+                controlnet = ControlNetModel.from_pretrained(CONTROLNET_ID, torch_dtype=torch.float16)
+                pipe = StableDiffusionControlNetImg2ImgPipeline.from_pretrained(
+                    MODEL_ID, controlnet=controlnet, torch_dtype=torch.float16,
+                    variant="fp16", safety_checker=None,
+                )
+                _cn_ok = True
+            except Exception as e:  # fall back to plain img2img instead of failing
+                print(f"[gpu] ControlNet unavailable ({e}); using plain img2img")
+                pipe = None
+        if pipe is None:
+            from diffusers import StableDiffusionImg2ImgPipeline
+            pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
+                MODEL_ID, torch_dtype=torch.float16, variant="fp16", safety_checker=None
+            )
         # Same sampler as the ComfyUI workflow: dpmpp_2m + karras
         pipe.scheduler = DPMSolverMultistepScheduler.from_config(
             pipe.scheduler.config, use_karras_sigmas=True,
@@ -57,6 +76,19 @@ def get_pipe():
         )
         _pipe = pipe.to("cuda")
     return _pipe
+
+
+def edge_map(img: Image.Image) -> Image.Image:
+    """White edges on black (what the canny ControlNet expects)."""
+    try:
+        import cv2
+        import numpy as np
+        edges = cv2.Canny(np.array(img.convert("RGB")), 60, 140)
+        return Image.fromarray(np.stack([edges] * 3, axis=-1))
+    except Exception:
+        from PIL import ImageFilter
+        g = img.convert("L").filter(ImageFilter.FIND_EDGES).point(lambda v: 255 if v > 25 else 0)
+        return g.convert("RGB")
 
 
 def fit(img: Image.Image) -> Image.Image:
@@ -77,15 +109,23 @@ def generate(params: dict) -> Image.Image:
     import torch
     pipe = get_pipe()
     gen = torch.Generator("cuda").manual_seed(int(params["seed"]) % (2**32))
-    return pipe(
+    common = dict(
         prompt=params["positive"],
         negative_prompt=params["negative"],
         image=src,
-        strength=float(params["denoise"]),
         guidance_scale=float(params["cfg"]),
         num_inference_steps=int(params["steps"]),
         generator=gen,
-    ).images[0]
+    )
+    if _cn_ok:
+        return pipe(
+            strength=float(params["denoise"]),
+            control_image=edge_map(src),
+            controlnet_conditioning_scale=float(params.get("controlnet_scale", 0.6)),
+            **common,
+        ).images[0]
+    # Plain img2img: a high strength would scramble the room, so cap it.
+    return pipe(strength=min(float(params["denoise"]), 0.62), **common).images[0]
 
 
 def worker():
@@ -122,6 +162,7 @@ def parse_workflow(wf: dict) -> dict:
             "steps": sampler.get("steps", 25),
             "cfg": sampler.get("cfg", 7),
             "denoise": sampler.get("denoise", 0.55),
+            "controlnet_scale": sampler.get("controlnet_scale", 0.6),
         }
     except (KeyError, IndexError, TypeError) as e:
         raise HTTPException(400, f"Unsupported workflow: missing {e}")
@@ -131,7 +172,7 @@ def parse_workflow(wf: dict) -> dict:
 
 @app.get("/system_stats")
 def system_stats():
-    return {"server": "indar-gpu", "fake": FAKE, "model": MODEL_ID, "queue": work.qsize()}
+    return {"server": "indar-gpu", "fake": FAKE, "model": MODEL_ID, "controlnet": _cn_ok, "queue": work.qsize()}
 
 
 @app.post("/upload/image")
