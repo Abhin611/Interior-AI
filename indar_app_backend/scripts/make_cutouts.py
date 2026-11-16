@@ -79,8 +79,50 @@ def cut_out(path: Path):
     return out, "ok"
 
 
+_session = None
+
+
+def cut_out_ml(path: Path):
+    """For lifestyle photos: let the small open-source `rembg` model (u2netp, ~4 MB,
+    runs on the CPU) pick out the main product, then reject results that are not a
+    single clean product (a whole scene, scattered pieces, a shape filling the photo)."""
+    global _session
+    try:
+        from rembg import new_session, remove
+    except ImportError:
+        return None, "rembg not installed (run with: uv run --with rembg[cpu] ...)"
+    if _session is None:
+        _session = new_session("u2netp")
+    im = Image.open(path).convert("RGB")
+    im.thumbnail((700, 700))
+    mask = np.asarray(remove(im, session=_session).split()[3]) > 128
+    h, w = mask.shape
+    share = mask.mean()
+    if share < 0.06:
+        return None, "no product recognised"
+    if share > 0.72:
+        return None, "a whole scene, not one product"
+    ys, xs = np.where(mask)
+    y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+    if mask[y0:y1, x0:x1].mean() < 0.30:
+        return None, "scattered pieces"
+    if (y0 == 0) + (y1 == h) + (x0 == 0) + (x1 == w) >= 3:
+        return None, "touches the photo edge on most sides"
+    alpha = Image.fromarray((mask * 255).astype("uint8"), "L").filter(ImageFilter.GaussianBlur(0.9))
+    out = im.convert("RGBA")
+    out.putalpha(alpha)
+    out = out.crop((x0, y0, x1, y1))
+    out.thumbnail((MAX_SIDE, MAX_SIDE))
+    return out, "ok (rembg)"
+
+
 def main():
     force = "--force" in sys.argv
+    use_ml = "--ml" in sys.argv
+    blocked = set()
+    block_file = DATASET / "cutout_blocklist.txt"
+    if block_file.exists():  # products whose rembg cut-out looked poor on review
+        blocked = {ln.split("#")[0].strip() for ln in block_file.read_text(encoding="utf-8").splitlines() if ln.strip()}
     manifest, skipped = {}, []
     for img in sorted(DATASET.glob("*/Image/*.jpg")):
         theme, asin = img.parent.parent.name, img.stem
@@ -91,6 +133,8 @@ def main():
                 manifest[asin] = {"theme": theme, "w": c.width, "h": c.height}
             continue
         result, why = cut_out(img)
+        if result is None and use_ml and asin not in blocked:
+            result, why = cut_out_ml(img)
         if result is None:
             skipped.append((asin, theme, why))
             continue

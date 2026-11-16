@@ -124,3 +124,14 @@ All `/api` routes need `Authorization: Bearer <Supabase access token>`.
 ## Credits
 
 Built as a Semester 6 mini project. The frontend and backend were first built in separate repos ([Interior-AI](https://github.com/hridhikeshspremnath/Interior-AI) and [Indar-Backend](https://github.com/hridhikeshspremnath/Indar-Backend)) and combined here.
+
+## Design pictures use real products
+
+A design picture is your room photo with real catalog products placed in it (no AI drawing), so everything you see can be bought. Each product needs a transparent cut-out:
+
+```bash
+cd indar_app_backend
+uv run --with "rembg[cpu]" python scripts/make_cutouts.py --ml   # plain-background photos + the small rembg model for the rest
+```
+
+Products whose cut-out looks poor are listed in `dataset/cutout_blocklist.txt`. To add products, put their ASINs in `scripts/new_products.csv` (or save their photos in `scripts/new_photos/<ASIN>.jpg`) and run `uv run python scripts/add_products.py`, then `uv run python -m app.database.seed` and `uv run python scripts/setup_storage.py`.

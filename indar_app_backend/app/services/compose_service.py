@@ -19,6 +19,9 @@ from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 DATASET = Path(__file__).resolve().parents[2] / "dataset"
 MAX_SIDE = 1280
 _FLAT = re.compile(r"\b(rug|mat|mats|carpet|doormat|rangoli|sticker)\b", re.I)
+# Catalog items have no real dimensions, so small things are recognised by name and
+# drawn small (a tree topper must not become as big as a person).
+_SMALL = re.compile(r"\b(topper|ornaments?|tealights?|candles?|diyas?|mini|baubles?|bulbs?|stars?|figurine|statue|doll)\b", re.I)
 
 _index: Optional[dict] = None
 
@@ -152,7 +155,10 @@ def compose_room(room_bytes: bytes, items: list[dict]) -> tuple[bytes, list[dict
     for i, it in enumerate(floor):
         cut = load(it["asin"])
         a = cut.width / cut.height
-        flat = bool(_FLAT.search(it.get("name", "")))
+        # Lying flat only if the picture is roughly square or wide; a tall picture of
+        # stacked mats is drawn standing.
+        flat = bool(_FLAT.search(it.get("name", ""))) and a >= 0.7
+        small = bool(_SMALL.search(it.get("name", ""))) and not flat
         cx = int(W * (0.24 + 0.52 * (i + 0.5) / n) + rng.randint(-int(0.02 * W), int(0.02 * W)))
         base = int(min(H * 0.96, y_floor + H * (0.13 + 0.07 * (i % 2))))
         if flat:
@@ -161,7 +167,7 @@ def compose_room(room_bytes: bytes, items: list[dict]) -> tuple[bytes, list[dict
             h = int(max(10, min(w / a * 0.42, 0.17 * H)))
             y = base - h
         else:
-            h = int(min(0.34 * H, (base - 0.18 * H)))
+            h = int(min((0.13 if small else 0.30) * H, (base - 0.18 * H)))
             w = int(h * a)
             if w > 0.22 * W:
                 w = int(0.22 * W)

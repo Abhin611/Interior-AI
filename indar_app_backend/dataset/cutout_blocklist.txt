@@ -1,0 +1,14 @@
+# Products whose rembg cut-out looked poor on review. make_cutouts.py --ml skips these,
+# so they are not drawn into room pictures. One ASIN per line.
+B0DCNCWN2N  # Diwali neon sign: background left behind
+B0FPXFTFK1  # Diwali: plain red blob
+B0BPFGTJSW  # Christmas: two torn red-and-white strips
+B0CKK57LBY  # Christmas: a whole house exterior
+B0CN3CG2P2  # Christmas wreath: dark disc filling the centre
+B0BD7VLPBM  # Onam: lotus and cow, beige leftovers
+B0D3MB3CBT  # Halloween: poster stack with debris
+B0DG85NZMH  # Halloween: witch picture, torn white block
+B0C4SHB8GW  # Pop-Culture rug: room furniture left in
+B0C6G4N6R8  # Pop-Culture rug: room furniture left in
+B0D1P7WF7K  # Pop-Culture rug: room furniture left in
+B0DNWDQNKP  # Christmas snow-globe lantern: stray red ball beside it
