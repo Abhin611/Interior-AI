@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "oversized-h1",
+        "value": "*",
+        "files": [
+          "docs/indar_build_guide.html"
+        ],
+        "createdAt": "2026-11-16T16:02:04.166Z",
+        "reason": "Claude: the h1s are 22pt chapter titles in an A4 print document, not web hero headlines; the PDF layout matches the Octria guide"
+      }
+    ]
+  }
+}

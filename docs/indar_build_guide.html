@@ -29,7 +29,7 @@ tr { break-inside: avoid; }
 .cover p.lead { font-size: 12pt; color: var(--mut); max-width: 150mm; }
 .cover table { width: 150mm; margin-top: 22pt; } .cover td:first-child { color: var(--mut); width: 32mm; }
 .toc { border-bottom: 1px solid var(--line); padding: 5pt 0; } .toc b { color: var(--acc); display: inline-block; width: 22pt; }
-.qa h3 { color: var(--ink); } .qa p { color: #3a332c; }
+.qa h2 { color: var(--ink); font-size: 11pt; margin: 10pt 0 3pt; } .qa p { color: #3a332c; }
 .pagefirst h1 { break-before: auto; }
 </style></head><body>
 
@@ -412,29 +412,29 @@ git add -A &amp;&amp; git commit -m "..." &amp;&amp; git push</pre>
 
 <h1>11. Interview questions and how to answer them</h1>
 <div class="qa">
-<h3>What does Indar do, in one breath?</h3>
+<h2>What does Indar do, in one breath?</h2>
 <p>You photograph your room, pick a festival theme or describe what you want, and the app shows your room with real products from an Amazon catalog placed in it. You can put exactly those products in a cart or preview them in AR.</p>
-<h3>Why not just use AI image generation?</h3>
+<h2>Why not just use AI image generation?</h2>
 <p>I tried it first, with Stable Diffusion and ControlNet on a free Colab GPU. It looked nice but drew things that could not be bought. The key requirement became that everything in the picture is a real catalog product, so I composite cut-outs of real products instead.</p>
-<h3>How do you guarantee the cart matches the picture?</h3>
+<h2>How do you guarantee the cart matches the picture?</h2>
 <p>The same list of products is used for both. The compositor receives the products and returns their placements; the bundle is built from those same product ids. An API test checks that the bundle equals what is shown.</p>
-<h3>How does the compositor decide where things go?</h3>
+<h2>How does the compositor decide where things go?</h2>
 <p>It finds the floor line from brightness changes in the photo, then uses three zones: wall art on the back wall, hanging items from the ceiling, floor items in front of the wall with shadows. Rugs lie flat, small items are drawn small, and a seed from the photo makes the layout repeatable.</p>
-<h3>Why Supabase?</h3>
+<h2>Why Supabase?</h2>
 <p>Auth, Postgres and file storage in one free plan. The backend verifies the Supabase token, so I did not write my own login.</p>
-<h3>Why FastAPI?</h3>
+<h2>Why FastAPI?</h2>
 <p>It is quick to write, async, validates input with Pydantic and documents itself. Heavy image work runs in a thread (<code>asyncio.to_thread</code>) so the server stays responsive.</p>
-<h3>How is the app kept free to run?</h3>
+<h2>How is the app kept free to run?</h2>
 <p>Free Supabase plan, no paid GPU (the AI path is optional), cut-outs are made once ahead of time, and composing a picture takes a few seconds on a CPU.</p>
-<h3>How do you handle a request the catalog cannot serve?</h3>
+<h2>How do you handle a request the catalog cannot serve?</h2>
 <p>The API replies 422 with a clear message such as "No products in our catalog match that yet", and the app shows it. It never invents a product.</p>
-<h3>How did you show real progress?</h3>
+<h2>How did you show real progress?</h2>
 <p>The backend stores the current stage in memory under a progress id. The app sends the id in a header and polls an endpoint, then moves a bar through stages with plain-language names.</p>
-<h3>What was your hardest bug?</h3>
+<h2>What was your hardest bug?</h2>
 <p>A good answer is chapter 10, problem 5: a scripted patch changed the wrong function, the unit-style checks passed, and only a real end-to-end generation exposed it. That is why I always run a real request after a change.</p>
-<h3>What would you do next?</h3>
+<h2>What would you do next?</h2>
 <p>Host the backend for free, add many more products with clean photos so every theme fills a room, add real product sizes for correct scale, and test AR and the camera on a phone.</p>
-<h3>What are the limits you are honest about?</h3>
+<h2>What are the limits you are honest about?</h2>
 <p>Only 31 of 90 products have clean cut-outs, so some themes are sparse; sizes are estimated; the picture is a collage rather than a painted scene; AR and gallery saving are not yet tested on a phone.</p>
 </div>
 
