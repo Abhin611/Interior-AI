@@ -52,7 +52,8 @@ def get_pipe():
         )
         # Same sampler as the ComfyUI workflow: dpmpp_2m + karras
         pipe.scheduler = DPMSolverMultistepScheduler.from_config(
-            pipe.scheduler.config, use_karras_sigmas=True
+            pipe.scheduler.config, use_karras_sigmas=True,
+            algorithm_type="dpmsolver++", solver_order=2, final_sigmas_type="sigma_min",
         )
         _pipe = pipe.to("cuda")
     return _pipe
