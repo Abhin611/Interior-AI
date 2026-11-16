@@ -50,15 +50,16 @@ tr { break-inside: avoid; }
 <div class="toc"><b>1</b> What Indar is</div>
 <div class="toc"><b>2</b> The technology and why each piece was chosen</div>
 <div class="toc"><b>3</b> Getting a computer ready</div>
-<div class="toc"><b>4</b> Part 1: the backend and the data</div>
-<div class="toc"><b>5</b> Part 2: the Flutter app</div>
-<div class="toc"><b>6</b> Part 3: making the picture (AI first, then real products)</div>
-<div class="toc"><b>7</b> Part 4: cut-outs and growing the catalog</div>
-<div class="toc"><b>8</b> The routine for every change</div>
-<div class="toc"><b>9</b> The toughest problems, and how each was solved</div>
-<div class="toc"><b>10</b> Interview questions and how to answer them</div>
-<div class="toc"><b>11</b> Words used in Indar</div>
-<div class="note" style="margin-top:14pt"><b>How to use this guide.</b> Chapters 1 and 2 explain what the app is and the tools. Chapter 3 gets a PC ready. Chapters 4 to 7 follow the build in order, down to the commands typed. Chapter 8 is the routine for every change. Chapters 9 and 10 are for interviews: the hardest problems and ready answers.</div>
+<div class="toc"><b>4</b> How to run Indar, step by step</div>
+<div class="toc"><b>5</b> Part 1: the backend and the data</div>
+<div class="toc"><b>6</b> Part 2: the Flutter app</div>
+<div class="toc"><b>7</b> Part 3: making the picture (AI first, then real products)</div>
+<div class="toc"><b>8</b> Part 4: cut-outs and growing the catalog</div>
+<div class="toc"><b>9</b> The routine for every change</div>
+<div class="toc"><b>10</b> The toughest problems, and how each was solved</div>
+<div class="toc"><b>11</b> Interview questions and how to answer them</div>
+<div class="toc"><b>12</b> Words used in Indar</div>
+<div class="note" style="margin-top:14pt"><b>How to use this guide.</b> Chapters 1 and 2 explain what the app is and the tools. Chapter 3 gets a PC ready and chapter 4 shows a beginner how to run the app. Chapters 5 to 8 follow the build in order, down to the commands typed. Chapter 9 is the routine for every change. Chapters 10 and 11 are for interviews: the hardest problems and ready answers.</div>
 
 <h1>1. What Indar is</h1>
 <p>Indar is a free app that redecorates a room for a festival or theme. You take a photo of your own room, pick a theme (Onam, Christmas, Diwali, Halloween, Birthday or Pop-Culture) or describe what you want in words, and the app shows your room with decor in it. Everything you see in the picture is a real product from a catalog of Amazon India listings, so the whole picture can be put in an Amazon cart in one tap. Each product also has a 3D model, so you can preview it in your room with AR before buying.</p>
@@ -74,7 +75,7 @@ tr { break-inside: avoid; }
 <tr><td>AR preview</td><td>Shows each product's .glb 3D model with <code>model_viewer_plus</code>.</td></tr>
 </table>
 <h2>The five principles every decision followed</h2>
-<div class="step"><b class="n">1</b><div><b>What you see is what you can buy.</b> No imaginary furniture. Anything in the picture must be in the cart. This one rule changed the whole design (chapter 6).</div></div>
+<div class="step"><b class="n">1</b><div><b>What you see is what you can buy.</b> No imaginary furniture. Anything in the picture must be in the cart. This one rule changed the whole design (chapter 7).</div></div>
 <div class="step"><b class="n">2</b><div><b>Free to use.</b> Every part runs on a free tier: Supabase free plan, Colab for the optional GPU, no paid servers.</div></div>
 <div class="step"><b class="n">3</b><div><b>Easy first.</b> One photo, one tap on a theme, and a result. The app tells the user plainly what it is doing and what went wrong.</div></div>
 <div class="step"><b class="n">4</b><div><b>Honest limits.</b> If the catalog has nothing for a request, the app says so instead of inventing something.</div></div>
@@ -136,7 +137,115 @@ cp .env.example .env     # fill in the Supabase values
 uv sync</pre>
 <div class="note"><b>Note.</b> Never paste the database password, the service key, the JWT secret or the GPU token into chat or commit them. They live only in <code>.env</code> (backend) and <code>env.json</code> (app), both kept out of git.</div>
 
-<h1>4. Part 1: the backend and the data</h1>
+<h1>4. How to run Indar, step by step</h1>
+<p>This chapter is for someone who has never run a project like this. Follow the steps in order. Nothing here needs a GPU, a paid account or any AI service: the app runs on your own computer using a free Supabase account.</p>
+<div class="note"><b>The big picture.</b> Indar has three pieces that must all be running: (1) the <b>database and storage</b> on Supabase's website, (2) the <b>backend</b>, a small Python program on your computer, and (3) the <b>app</b>, which you open in Chrome or on a phone. The app talks to the backend, and the backend talks to Supabase.</div>
+<h2>What you need before you start</h2>
+<table>
+<tr><th>You need</th><th>Why</th><th>Where to get it</th></tr>
+<tr><td>A Windows, Mac or Linux computer with internet</td><td>Runs the backend and the app</td><td>-</td></tr>
+<tr><td>Git</td><td>Downloads the code</td><td>git-scm.com</td></tr>
+<tr><td>Python 3.12 or newer, and <b>uv</b></td><td>Runs the backend</td><td>python.org, then <code>pip install uv</code></td></tr>
+<tr><td>Flutter SDK</td><td>Builds and runs the app</td><td>docs.flutter.dev (chapter 3 lists the steps)</td></tr>
+<tr><td>Google Chrome</td><td>Shows the app on your computer</td><td>google.com/chrome</td></tr>
+<tr><td>A free Supabase account</td><td>Database, sign-in and picture storage</td><td>supabase.com</td></tr>
+</table>
+
+<h2>Part A. Get the code</h2>
+<div class="step"><b class="n">1</b><div>Open a terminal (on Windows, open <b>Git Bash</b> or PowerShell).</div></div>
+<div class="step"><b class="n">2</b><div>Download the project and go into it:</div></div>
+<pre>git clone https://github.com/Abhin611/Interior-AI
+cd Interior-AI</pre>
+
+<h2>Part B. Set up Supabase (once)</h2>
+<div class="step"><b class="n">1</b><div>Sign in at supabase.com and click <b>New project</b>. Give it a name and a database password and <b>write the password down</b>. Wait about two minutes until it is ready.</div></div>
+<div class="step"><b class="n">2</b><div>Open <b>Project Settings, then API</b>. Copy three things into a notepad: the <b>Project URL</b>, the <b>anon public key</b> and the <b>service_role key</b>.</div></div>
+<div class="step"><b class="n">3</b><div>In the JWT settings copy the <b>legacy JWT secret</b> (the older shared secret, not the newer signing keys).</div></div>
+<div class="step"><b class="n">4</b><div>Click the green <b>Connect</b> button at the top and choose <b>Session pooler</b>. Copy the connection string and put your database password where it says <code>[YOUR-PASSWORD]</code>. Change the start of it from <code>postgresql://</code> to <code>postgresql+asyncpg://</code>.</div></div>
+<div class="step"><b class="n">5</b><div>Open <b>Authentication, then Sign In / Providers, then Email</b> and turn <b>Confirm email</b> off. This lets you register without checking an inbox while you test.</div></div>
+<div class="note"><b>Keep these secret.</b> The service_role key, the JWT secret and the database password give full control of your project. Never post them in chat, a screenshot or GitHub.</div>
+
+<h2>Part C. Start the backend</h2>
+<div class="step"><b class="n">1</b><div>Go into the backend folder and make your settings file:</div></div>
+<pre>cd indar_app_backend
+cp .env.example .env</pre>
+<div class="step"><b class="n">2</b><div>Open <code>.env</code> in a text editor and fill in the values you copied. The <code>COMFYUI_URL</code> line can stay as it is; it is only for the old AI route.</div></div>
+<pre>SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_ANON_KEY=the anon public key
+SUPABASE_JWT_SECRET=the legacy JWT secret
+SUPABASE_SERVICE_ROLE_KEY=the service_role key
+SUPABASE_STORAGE_URL=https://YOUR_PROJECT.supabase.co/storage/v1
+DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@HOST:5432/postgres</pre>
+<div class="step"><b class="n">3</b><div>Install the backend's packages (this takes a minute the first time):</div></div>
+<pre>uv sync</pre>
+<div class="step"><b class="n">4</b><div>Create the tables and load the 6 themes and 90 products into your database:</div></div>
+<pre>uv run python -m app.database.seed</pre>
+<div class="step"><b class="n">5</b><div>Create the picture storage and upload all product photos, 3D models and cut-outs:</div></div>
+<pre>uv run python scripts/setup_storage.py</pre>
+<div class="step"><b class="n">6</b><div>Start the backend and leave this window open:</div></div>
+<pre>uv run python main.py</pre>
+<p><b>How to check it works.</b> Open <code>http://localhost:8000/health</code> in Chrome. You should see <code>{"status":"ok"}</code>. <code>http://localhost:8000/docs</code> shows every route.</p>
+<div class="note"><b>Steps 4 and 5 are done once.</b> Next time, only step 6 is needed. Run them again only if you change the products.</div>
+
+<h2>Part D. Start the app on your computer (in Chrome)</h2>
+<p>Open a <b>second</b> terminal window, because the first one is busy running the backend.</p>
+<div class="step"><b class="n">1</b><div>Go into the app folder from the project's main folder and make its settings file:</div></div>
+<pre>cd indar_app_frontend
+cp env.example.json env.json</pre>
+<div class="step"><b class="n">2</b><div>Open <code>env.json</code> and fill it in. On Chrome the backend address is <code>localhost</code>:</div></div>
+<pre>{
+  "SUPABASE_URL": "https://YOUR_PROJECT.supabase.co",
+  "SUPABASE_ANON_KEY": "the anon public key",
+  "API_BASE_URL": "http://localhost:8000"
+}</pre>
+<div class="step"><b class="n">3</b><div>Download the app's packages and run it in Chrome:</div></div>
+<pre>flutter pub get
+flutter run -d chrome --dart-define-from-file=env.json</pre>
+<div class="step"><b class="n">4</b><div>Chrome opens with the app. The first start takes a few minutes. After that, small changes appear quickly.</div></div>
+<div class="note"><b>Tip.</b> Only the <b>anon</b> key goes in <code>env.json</code>. Never put the service_role key in the app.</div>
+
+<h2>Part E. Using the app</h2>
+<div class="step"><b class="n">1</b><div><b>Register.</b> Tap Register, enter an email and a password (at least 6 characters) and continue. If you turned off email confirmation you are signed in at once.</div></div>
+<div class="step"><b class="n">2</b><div><b>Add a room photo.</b> Pick a photo of your room. A clear photo of a room with a visible wall and floor works best.</div></div>
+<div class="step"><b class="n">3</b><div><b>Choose what you want.</b> Tap a theme (Onam, Christmas, Diwali, Halloween, Birthday or Pop-Culture), or type what you want such as "fairy lights and a rug", or do both.</div></div>
+<div class="step"><b class="n">4</b><div><b>Generate.</b> A progress bar shows the steps. In a few seconds you see your room with real products placed in it.</div></div>
+<div class="step"><b class="n">5</b><div><b>Use the result.</b> Tap Download for a JPEG or PDF, open the items to see them in AR (on a phone), or open the cart to buy exactly those products on Amazon India.</div></div>
+<div class="note"><b>Good to know.</b> Only products that have a clean cut-out are used, so some themes show only a few items (Christmas and Diwali are the sparsest). If you ask for something the catalog does not have, such as "a big blue sofa", the app tells you so instead of inventing it.</div>
+
+<h2>Part F. Running on an Android phone</h2>
+<div class="step"><b class="n">1</b><div>Put the phone and the computer on the <b>same Wi-Fi</b>.</div></div>
+<div class="step"><b class="n">2</b><div>On the phone, open <b>Settings, About phone</b> and tap <b>Build number</b> seven times. Then in <b>Developer options</b> turn on <b>USB debugging</b>.</div></div>
+<div class="step"><b class="n">3</b><div>Find your computer's address: on Windows run <code>ipconfig</code> and read the <b>IPv4 Address</b>, for example <code>192.168.1.10</code>.</div></div>
+<div class="step"><b class="n">4</b><div>In <code>env.json</code> change the address to <code>"API_BASE_URL": "http://192.168.1.10:8000"</code> (use your own number). On an Android emulator, use <code>http://10.0.2.2:8000</code> instead.</div></div>
+<div class="step"><b class="n">5</b><div>Connect the phone with a USB cable, accept the prompt on the phone, then run:</div></div>
+<pre>flutter devices
+flutter run --dart-define-from-file=env.json</pre>
+<p>AR, the camera and saving to the gallery work on a phone. They have not been tested yet, so report anything odd.</p>
+
+<h2>Every day after the first time</h2>
+<pre># terminal 1
+cd Interior-AI/indar_app_backend
+uv run python main.py
+
+# terminal 2
+cd Interior-AI/indar_app_frontend
+flutter run -d chrome --dart-define-from-file=env.json</pre>
+
+<h2>If something goes wrong</h2>
+<table>
+<tr><th>What you see</th><th>Why, and what to do</th></tr>
+<tr><td><code>flutter</code> or <code>uv</code> "not found"</td><td>The tool is not on PATH. Close and reopen the terminal, or install it again and tick "add to PATH".</td></tr>
+<tr><td>Backend stops with a database error</td><td>The <code>DATABASE_URL</code> is wrong. It must start with <code>postgresql+asyncpg://</code>, use the Session pooler address and your real password.</td></tr>
+<tr><td>"Address already in use" on port 8000</td><td>An old backend is still running. Close its window, or on Windows run <code>Get-NetTCPConnection -LocalPort 8000</code> in PowerShell and stop that process.</td></tr>
+<tr><td>The app says it cannot reach the server</td><td>The backend is not running, or <code>API_BASE_URL</code> is wrong for where you run the app (<code>localhost</code> for Chrome, your PC's number for a phone).</td></tr>
+<tr><td>Sign-in works but pictures never load</td><td>Step 5 of Part C was skipped. Run <code>uv run python scripts/setup_storage.py</code>.</td></tr>
+<tr><td>Register asks you to confirm an email</td><td>Turn off Confirm email in Supabase (Part B, step 5), or open the link in the email you received.</td></tr>
+<tr><td>"No products in our catalog match that yet"</td><td>Not an error. Pick a theme, or describe decor like lights, wreath, garland, rug or poster.</td></tr>
+<tr><td>New products or cut-outs do not show up</td><td>Restart the backend; it reads the cut-out list only when it starts.</td></tr>
+</table>
+<div class="note"><b>Optional extras.</b> Google sign-in needs a Google Cloud OAuth client (see the project README). The old AI drawing route needs a free Colab GPU and is no longer part of the normal flow.</div>
+
+<h1>5. Part 1: the backend and the data</h1>
 <p>Goal: a working API with real accounts and a real product catalog before any screen exists, so every screen can be built against something true.</p>
 <h2>Step 1. Create the Supabase project</h2>
 <p>A new project gave three things: a <b>Project URL</b>, an <b>anon key</b> (safe to put in the app) and a <b>service_role key</b> (backend only). From <b>Connect</b> the <b>Session pooler</b> connection string was copied, because the direct connection does not work from many home networks. In <b>Authentication, Sign In / Providers, Email</b> the confirmation email was turned off for easy testing. In the JWT settings, the <b>legacy JWT secret</b> is what the backend uses to verify tokens.</p>
@@ -180,7 +289,7 @@ uv run python main.py                      # http://localhost:8000, docs at /doc
 <h2>Step 7. Test it with a script, not by hand</h2>
 <p>A small Python script signs in a test user with the Supabase client, then calls each route with <code>httpx</code> and prints the status codes. It was used again and again through the project (for example <code>catalog_test.py</code> runs every theme and prompt mode and checks that the cart equals what the picture shows).</p>
 
-<h1>5. Part 2: the Flutter app</h1>
+<h1>6. Part 2: the Flutter app</h1>
 <p>Goal: a simple flow a stranger can follow: sign in, add a photo, pick a theme, see the result, buy or preview in AR.</p>
 <h2>Step 1. Create the project and the config</h2>
 <pre>cd indar_app_frontend
@@ -211,7 +320,7 @@ flutter run --dart-define-from-file=env.json</pre>
 </ul>
 <div class="note"><b>Tip.</b> Keep platform differences behind one import (<code>file_download.dart</code> picks the web or stub file). Screens never ask "am I on the web?".</div>
 
-<h1>6. Part 3: making the picture (AI first, then real products)</h1>
+<h1>7. Part 3: making the picture (AI first, then real products)</h1>
 <h2>The first idea: let AI redecorate the room</h2>
 <p>The first design drew the room with AI. The backend picked theme products, planned where each goes (wall, hanging, floor), and sent the room photo to a GPU server that ran Dreamshaper 8 image-to-image. The GPU server speaks the same API as ComfyUI, so a real ComfyUI could replace it.</p>
 <h3>Running the GPU for free</h3>
@@ -240,7 +349,7 @@ flutter run --dart-define-from-file=env.json</pre>
 </table>
 <div class="note"><b>Trade-off.</b> The result is a collage of real products, not a painted scene. It is honest and buyable, but less pretty than AI art. This was a deliberate choice.</div>
 
-<h1>7. Part 4: cut-outs and growing the catalog</h1>
+<h1>8. Part 4: cut-outs and growing the catalog</h1>
 <h2>What a cut-out is</h2>
 <p>A cut-out is a product photo with the background removed (a transparent PNG), so it can be pasted on a room photo. <code>scripts/make_cutouts.py</code> makes them and writes <code>dataset/&lt;theme&gt;/Cutout/&lt;ASIN&gt;.png</code> plus a list in <code>dataset/cutouts.json</code>.</p>
 <h2>How a clean cut-out is made</h2>
@@ -260,7 +369,7 @@ uv run python -m app.database.seed            # loads the new rows
 uv run python scripts/setup_storage.py        # uploads the new files</pre>
 <p>About 30 real ASINs found by web search are already in <code>new_products.csv</code> but none were added yet, because their photos could not be fetched.</p>
 
-<h1>8. The routine for every change</h1>
+<h1>9. The routine for every change</h1>
 <div class="step"><b class="n">1</b><div><b>Make one small change.</b> One idea per commit.</div></div>
 <div class="step"><b class="n">2</b><div><b>Test the backend with a script.</b> Restart uvicorn (it caches the cut-out list at start) and run the API test for every theme and prompt mode. Check the status codes and that the cart equals the picture.</div></div>
 <div class="step"><b class="n">3</b><div><b>Look at the result.</b> Open the produced picture. Counting items is not enough; check overlaps, sizes and where things sit.</div></div>
@@ -279,7 +388,7 @@ git add -A &amp;&amp; git commit -m "..." &amp;&amp; git push</pre>
 <li>Avoid long scripts with nested quotes in one shell line; write them to a file instead.</li>
 </ul>
 
-<h1>9. The toughest problems, and how each was solved</h1>
+<h1>10. The toughest problems, and how each was solved</h1>
 <h2>1. "Imaginary" pictures</h2>
 <p><b>Symptom.</b> AI drew furniture and decor that were not in the catalog, or drew nothing visible.<br><b>Cause.</b> A generative model invents; it cannot be limited to a product list.<br><b>Fix.</b> Stop drawing. Paste real cut-outs into the user's photo, so the picture and the cart are the same list by construction.</p>
 <h2>2. The GPU server crashed on the scheduler</h2>
@@ -301,7 +410,7 @@ git add -A &amp;&amp; git commit -m "..." &amp;&amp; git push</pre>
 <h2>10. A tool that blocked a harmless command</h2>
 <p><b>Symptom.</b> A safety check blocked a pointless <code>rm</code> on a system path.<br><b>Lesson.</b> The block was right; the command had no purpose and was dropped.</p>
 
-<h1>10. Interview questions and how to answer them</h1>
+<h1>11. Interview questions and how to answer them</h1>
 <div class="qa">
 <h3>What does Indar do, in one breath?</h3>
 <p>You photograph your room, pick a festival theme or describe what you want, and the app shows your room with real products from an Amazon catalog placed in it. You can put exactly those products in a cart or preview them in AR.</p>
@@ -322,14 +431,14 @@ git add -A &amp;&amp; git commit -m "..." &amp;&amp; git push</pre>
 <h3>How did you show real progress?</h3>
 <p>The backend stores the current stage in memory under a progress id. The app sends the id in a header and polls an endpoint, then moves a bar through stages with plain-language names.</p>
 <h3>What was your hardest bug?</h3>
-<p>A good answer is chapter 9, problem 5: a scripted patch changed the wrong function, the unit-style checks passed, and only a real end-to-end generation exposed it. That is why I always run a real request after a change.</p>
+<p>A good answer is chapter 10, problem 5: a scripted patch changed the wrong function, the unit-style checks passed, and only a real end-to-end generation exposed it. That is why I always run a real request after a change.</p>
 <h3>What would you do next?</h3>
 <p>Host the backend for free, add many more products with clean photos so every theme fills a room, add real product sizes for correct scale, and test AR and the camera on a phone.</p>
 <h3>What are the limits you are honest about?</h3>
 <p>Only 31 of 90 products have clean cut-outs, so some themes are sparse; sizes are estimated; the picture is a collage rather than a painted scene; AR and gallery saving are not yet tested on a phone.</p>
 </div>
 
-<h1>11. Words used in Indar</h1>
+<h1>12. Words used in Indar</h1>
 <table>
 <tr><th>Word</th><th>Meaning</th></tr>
 <tr><td>ASIN</td><td>Amazon's product code. Files are named by it.</td></tr>
