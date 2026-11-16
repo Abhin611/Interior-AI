@@ -117,8 +117,15 @@ class _ThemePageState extends State<ThemePage> {
           '${themeProvider.selectedTheme} Room';
       uploadRequest.fields['type'] = 'living_room';
       uploadRequest.files.add(
-        await http.MultipartFile.fromPath(
-            'image', imageProvider.image!.path),
+        // fromBytes (not fromPath) so it also works on Flutter web, where
+        // dart:io files do not exist. The backend sniffs the real image type.
+        http.MultipartFile.fromBytes(
+          'image',
+          await imageProvider.image!.readAsBytes(),
+          filename: imageProvider.image!.name.isNotEmpty
+              ? imageProvider.image!.name
+              : 'room.jpg',
+        ),
       );
 
       final uploadResponse = await uploadRequest

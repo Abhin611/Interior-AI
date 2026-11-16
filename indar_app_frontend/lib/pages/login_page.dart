@@ -38,7 +38,9 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       await AuthService.login(email: email, password: password);
-      // StreamBuilder in main.dart handles navigation automatically
+      // The auth gate in main.dart swaps in the Home page; close this page
+      // (and anything above the gate) so it becomes visible.
+      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
 
     } on AuthException catch (e) {
       debugPrint('AuthException: ${e.message}');

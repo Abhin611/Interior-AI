@@ -97,6 +97,16 @@ void initState() {
       _isLoggedIn = session != null;
     });
 
+    // Login/Register are pushed on top of the gate; clear them so the Home
+    // (or Onboarding after sign out) page underneath becomes visible.
+    // Only on real sign in / out, never on token refresh.
+    if (data.event == AuthChangeEvent.signedIn ||
+        data.event == AuthChangeEvent.signedOut) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+      });
+    }
+
     if (data.event == AuthChangeEvent.signedIn) {
       AuthService.syncWithBackend();
     }
