@@ -57,23 +57,35 @@ def _build_prompt(
     #   prompt only   -> the user's own words lead
     #   theme + prompt-> the user's words lead, the theme fills in the rest
     scene = theme_scene(theme)
+    user = clip_words(user_prompt, 24)
+
+    # The model only reads ~75 tokens, so the words that matter most go FIRST.
+    # Furniture comes right after the user's own words, otherwise it gets cut off.
+    asked_for_furniture = any(
+        w in (user_prompt or "").lower()
+        for w in ("sofa", "couch", "chair", "table", "bed", "desk", "shelf", "furniture")
+    )
+    furniture = "" if asked_for_furniture else (
+        "a cozy furnished living room with a large sofa, armchair, rug, coffee table and plants"
+    )
     # Product names only help when a theme is chosen; with a free-text prompt the
     # user's words must lead, so unrelated product names are left out of the picture.
-    items = ", ".join(short_name(p["product_name"]) for p in planned_products[:4]) if scene else ""
-    user = clip_words(user_prompt, 28)
-    base = "living room furnished with a sofa, armchair, rug and coffee table, richly decorated, photorealistic, detailed, warm lighting"
+    items = ", ".join(
+        clip_words(short_name(p["product_name"]), 3) for p in planned_products[:3]
+    ) if scene else ""
+    tail = "photorealistic interior photo, detailed, warm lighting"
 
     if user and scene:
-        parts = [user, clip_words(scene, 16), items]
+        parts = [user, furniture, clip_words(scene, 14), items]
     elif user:
-        parts = [user, items]
+        parts = [user, furniture]
     else:
-        parts = [scene or "festive home decor", items]
-    positive = ", ".join([p for p in parts if p] + [base])
+        parts = [furniture, clip_words(scene, 18) or "festive home decor", items]
+    positive = ", ".join([p for p in parts if p] + [tail])
 
     negative = (
-        "empty room, bare walls, blurry, low quality, deformed, text, watermark, "
-        "people, floating objects, bad perspective"
+        "empty room, bare walls, empty floor, blurry, low quality, deformed, text, "
+        "watermark, people, floating objects, bad perspective"
     )
 
     return positive, negative
@@ -108,7 +120,7 @@ def _build_workflow(
     workflow["6"]["inputs"]["denoise"] = 0.85
     workflow["6"]["inputs"]["steps"] = 30
     workflow["6"]["inputs"]["cfg"] = 8
-    workflow["6"]["inputs"]["controlnet_scale"] = 0.6
+    workflow["6"]["inputs"]["controlnet_scale"] = 0.55
 
     return workflow
 
