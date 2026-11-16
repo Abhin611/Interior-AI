@@ -436,7 +436,7 @@ Future<void> _saveAsPdf(Uint8List bytes) async {
                     Expanded(
                       flex: 2,
                       child: GestureDetector(
-                        onTap: _purchasing ? null : _openAmazonCart,
+                        onTap: _purchasing ? null : _handleDownload,
                         child: Container(
                           height: 52,
                           decoration: BoxDecoration(
@@ -458,7 +458,7 @@ Future<void> _saveAsPdf(Uint8List bytes) async {
                                         MainAxisAlignment.center,
                                     children: [
                                       Icon(
-                                          Icons.shopping_cart_outlined,
+                                          Icons.download_outlined,
                                           color: Colors.white,
                                           size: 18),
                                       SizedBox(width: 8),
