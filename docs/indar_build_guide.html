@@ -49,17 +49,18 @@ tr { break-inside: avoid; }
 <h1>Contents</h1>
 <div class="toc"><b>1</b> What Indar is</div>
 <div class="toc"><b>2</b> The technology and why each piece was chosen</div>
-<div class="toc"><b>3</b> Getting a computer ready</div>
-<div class="toc"><b>4</b> How to run Indar, step by step</div>
-<div class="toc"><b>5</b> Part 1: the backend and the data</div>
-<div class="toc"><b>6</b> Part 2: the Flutter app</div>
-<div class="toc"><b>7</b> Part 3: making the picture (AI first, then real products)</div>
-<div class="toc"><b>8</b> Part 4: cut-outs and growing the catalog</div>
-<div class="toc"><b>9</b> The routine for every change</div>
-<div class="toc"><b>10</b> The toughest problems, and how each was solved</div>
-<div class="toc"><b>11</b> Interview questions and how to answer them</div>
-<div class="toc"><b>12</b> Words used in Indar</div>
-<div class="note" style="margin-top:14pt"><b>How to use this guide.</b> Chapters 1 and 2 explain what the app is and the tools. Chapter 3 gets a PC ready and chapter 4 shows a beginner how to run the app. Chapters 5 to 8 follow the build in order, down to the commands typed. Chapter 9 is the routine for every change. Chapters 10 and 11 are for interviews: the hardest problems and ready answers.</div>
+<div class="toc"><b>3</b> The things used in Indar, explained for beginners</div>
+<div class="toc"><b>4</b> Getting a computer ready</div>
+<div class="toc"><b>5</b> How to run Indar, step by step</div>
+<div class="toc"><b>6</b> Part 1: the backend and the data</div>
+<div class="toc"><b>7</b> Part 2: the Flutter app</div>
+<div class="toc"><b>8</b> Part 3: making the picture (AI first, then real products)</div>
+<div class="toc"><b>9</b> Part 4: cut-outs and growing the catalog</div>
+<div class="toc"><b>10</b> The routine for every change</div>
+<div class="toc"><b>11</b> The toughest problems, and how each was solved</div>
+<div class="toc"><b>12</b> Interview questions and how to answer them</div>
+<div class="toc"><b>13</b> Words used in Indar</div>
+<div class="note" style="margin-top:14pt"><b>How to use this guide.</b> Chapters 1 and 2 explain what the app is and the tools. Chapter 3 explains every technical word in plain language and how Indar uses it, so read it first if terms are new to you. Chapter 4 gets a PC ready and chapter 5 shows a beginner how to run the app. Chapters 6 to 9 follow the build in order, down to the commands typed. Chapter 10 is the routine for every change. Chapters 11 and 12 are for interviews: the hardest problems and ready answers. Chapter 13 is a short word list.</div>
 
 <h1>1. What Indar is</h1>
 <p>Indar is a free app that redecorates a room for a festival or theme. You take a photo of your own room, pick a theme (Onam, Christmas, Diwali, Halloween, Birthday or Pop-Culture) or describe what you want in words, and the app shows your room with decor in it. Everything you see in the picture is a real product from a catalog of Amazon India listings, so the whole picture can be put in an Amazon cart in one tap. Each product also has a 3D model, so you can preview it in your room with AR before buying.</p>
@@ -75,7 +76,7 @@ tr { break-inside: avoid; }
 <tr><td>AR preview</td><td>Shows each product's .glb 3D model with <code>model_viewer_plus</code>.</td></tr>
 </table>
 <h2>The five principles every decision followed</h2>
-<div class="step"><b class="n">1</b><div><b>What you see is what you can buy.</b> No imaginary furniture. Anything in the picture must be in the cart. This one rule changed the whole design (chapter 7).</div></div>
+<div class="step"><b class="n">1</b><div><b>What you see is what you can buy.</b> No imaginary furniture. Anything in the picture must be in the cart. This one rule changed the whole design (chapter 8).</div></div>
 <div class="step"><b class="n">2</b><div><b>Free to use.</b> Every part runs on a free tier: Supabase free plan, Colab for the optional GPU, no paid servers.</div></div>
 <div class="step"><b class="n">3</b><div><b>Easy first.</b> One photo, one tap on a theme, and a result. The app tells the user plainly what it is doing and what went wrong.</div></div>
 <div class="step"><b class="n">4</b><div><b>Honest limits.</b> If the catalog has nothing for a request, the app says so instead of inventing something.</div></div>
@@ -123,7 +124,128 @@ tr { break-inside: avoid; }
 <tr><td>gpu_server and colab</td><td>The optional image server and the notebook that runs it.</td></tr>
 </table>
 
-<h1>3. Getting a computer ready</h1>
+<h1>3. The things used in Indar, explained for beginners</h1>
+<p>Technical words appear all through this guide. This chapter explains each one in plain language, then says exactly how Indar uses it. You do not have to read it in one go: come back to it whenever a word is unfamiliar.</p>
+
+<h2>3.1 How apps talk to each other</h2>
+<table>
+<tr><th>Word</th><th>Plain meaning</th><th>How Indar uses it</th></tr>
+<tr><td>Frontend</td><td>The part you see and touch: screens, buttons, photos.</td><td>The Flutter app in <code>indar_app_frontend</code>.</td></tr>
+<tr><td>Backend</td><td>A program running out of sight that does the real work: stores data, checks who you are, makes the picture.</td><td>The Python FastAPI program in <code>indar_app_backend</code>.</td></tr>
+<tr><td>API</td><td>A menu of requests the backend understands. The app "orders" from the menu.</td><td>Routes like "upload a room" and "generate a design".</td></tr>
+<tr><td>Route or endpoint</td><td>One item on that menu, shown as an address such as <code>/api/rooms/</code>.</td><td><code>POST /api/designs/generate</code> makes a design.</td></tr>
+<tr><td>Request and response</td><td>The app asks (request); the backend answers (response).</td><td>The app sends a room id and a theme; the backend replies with the picture's address and the items in it.</td></tr>
+<tr><td>HTTP</td><td>The language web requests are written in.</td><td>Every call from the app to the backend.</td></tr>
+<tr><td>GET, POST, PATCH</td><td>The kind of request: GET reads, POST creates or does something, PATCH changes a little.</td><td>GET the bundle, POST a room photo, PATCH the display name.</td></tr>
+<tr><td>Status code</td><td>A number saying how it went: 200 or 201 good, 401 not signed in, 422 "I understood but cannot do that", 500 the server broke, 503 a needed service is unavailable.</td><td>422 is used for "No products in our catalog match that yet". The app shows the reason in plain words.</td></tr>
+<tr><td>JSON</td><td>A simple text format for data, like <code>{"theme": "Diwali"}</code>.</td><td>The format of nearly every request and response.</td></tr>
+<tr><td>Header</td><td>Extra information sent with a request.</td><td><code>Authorization</code> carries the sign-in token; <code>X-Progress-Id</code> lets the app ask how far a job has got.</td></tr>
+<tr><td>Upload (multipart)</td><td>Sending a file, such as a photo, inside a request.</td><td>The room photo is sent from the app to the backend.</td></tr>
+<tr><td>localhost</td><td>The name of "this same computer".</td><td>The app in Chrome reaches the backend at <code>http://localhost:8000</code>.</td></tr>
+<tr><td>Port</td><td>A numbered door on a computer. Different programs use different doors.</td><td>The backend listens on port 8000; the test web page on 5000.</td></tr>
+<tr><td>Polling</td><td>Asking again and again "are you done yet?"</td><td>The app asks every moment for the progress of a design and moves its bar.</td></tr>
+<tr><td>Rate limiting</td><td>Allowing only a number of requests per minute from one user.</td><td>The <code>slowapi</code> library stops one person flooding the generator.</td></tr>
+</table>
+
+<h2>3.2 Data, accounts and secrets</h2>
+<table>
+<tr><th>Word</th><th>Plain meaning</th><th>How Indar uses it</th></tr>
+<tr><td>Database</td><td>An organised store of information that survives when programs close.</td><td>Holds users, rooms, designs, products and carts.</td></tr>
+<tr><td>Table, row, column</td><td>A table is like a spreadsheet sheet; each row is one record, each column one field.</td><td>The <code>products</code> table has a row per product with columns such as name, price and category.</td></tr>
+<tr><td>SQL and Postgres</td><td>SQL is the language for asking a database questions. Postgres is a popular database that understands it.</td><td>Supabase gives you a Postgres database.</td></tr>
+<tr><td>ORM and SQLAlchemy</td><td>An ORM lets you work with tables as Python classes instead of writing SQL by hand.</td><td>The files in <code>app/models</code> describe each table as a class.</td></tr>
+<tr><td>Seed</td><td>Filling a database with starting data.</td><td><code>python -m app.database.seed</code> loads the 6 themes and 90 products. (A "random seed" is a different thing: a number that makes random choices repeatable.)</td></tr>
+<tr><td>Storage bucket</td><td>A folder in the cloud for files. A public bucket gives each file an address anyone can open.</td><td>The bucket <code>assets</code> holds room photos, design pictures, product photos and 3D models.</td></tr>
+<tr><td>Authentication</td><td>Proving who you are (signing in).</td><td>Supabase Auth checks email and password.</td></tr>
+<tr><td>Token and JWT</td><td>A token is a pass the app receives after sign-in. A JWT is a pass that is signed, so it cannot be forged.</td><td>The app sends it with every request; the backend checks the signature with the JWT secret to learn who is asking.</td></tr>
+<tr><td>Anon key and service_role key</td><td>Two Supabase keys. The anon key is public and low-power. The service_role key is all-powerful.</td><td>The anon key is in the app. The service_role key stays in the backend's <code>.env</code> only.</td></tr>
+<tr><td>Environment variable and <code>.env</code></td><td>A setting kept outside the code so secrets are not published.</td><td>Backend settings live in <code>.env</code>, app settings in <code>env.json</code>; both are kept out of git.</td></tr>
+<tr><td>Connection string</td><td>One line that tells a program how to reach a database: address, user and password.</td><td><code>DATABASE_URL</code>. Indar uses Supabase's Session pooler address.</td></tr>
+<tr><td>Async</td><td>Doing other work while waiting, instead of freezing.</td><td>The backend handles many requests at once; heavy picture work runs in a separate thread so it does not block others.</td></tr>
+<tr><td>Cache</td><td>A short-term memory of an answer so it need not be fetched again.</td><td>The backend remembers the cut-out list and the GPU address for a short time.</td></tr>
+</table>
+
+<h2>3.3 Tools for writing and sharing code</h2>
+<table>
+<tr><th>Word</th><th>Plain meaning</th><th>How Indar uses it</th></tr>
+<tr><td>Terminal / command line</td><td>A window where you type commands instead of clicking.</td><td>Every setup step in chapter 5 is a command.</td></tr>
+<tr><td>Git and GitHub</td><td>Git records every version of the code. GitHub is a website that stores that history online.</td><td>The project lives at github.com/Abhin611/Interior-AI.</td></tr>
+<tr><td>Clone, commit, push</td><td>Clone downloads a project; a commit saves a snapshot with a message; push uploads commits.</td><td>You clone to get Indar; each change in this guide is one commit.</td></tr>
+<tr><td>Package or library</td><td>Ready-made code written by others that you add to your project.</td><td>FastAPI, Pillow and Flutter's <code>provider</code> are all packages.</td></tr>
+<tr><td>Dependency</td><td>A package your project needs in order to run.</td><td>Listed in <code>pyproject.toml</code> (backend) and <code>pubspec.yaml</code> (app).</td></tr>
+<tr><td>uv</td><td>A fast Python tool that installs packages and runs programs.</td><td><code>uv sync</code> installs; <code>uv run python main.py</code> starts the backend.</td></tr>
+<tr><td>Virtual environment (<code>.venv</code>)</td><td>A private box of packages for one project, so projects do not clash.</td><td>uv creates it for you in <code>indar_app_backend/.venv</code>.</td></tr>
+<tr><td>PATH</td><td>The list of folders your computer searches when you type a command.</td><td>Flutter's <code>bin</code> folder must be on it so <code>flutter</code> works.</td></tr>
+<tr><td>Test</td><td>A small program that checks another program still works.</td><td>Scripts call the API for every theme and confirm that the cart equals the picture.</td></tr>
+</table>
+
+<h2>3.4 The app side</h2>
+<table>
+<tr><th>Word</th><th>Plain meaning</th><th>How Indar uses it</th></tr>
+<tr><td>Dart</td><td>The programming language Flutter apps are written in.</td><td>About 7,000 lines in <code>indar_app_frontend/lib</code>.</td></tr>
+<tr><td>Flutter</td><td>A toolkit by Google for building one app that runs on the web, Android, iOS and desktop.</td><td>The whole Indar app.</td></tr>
+<tr><td>Widget</td><td>A building block of a screen: a button, a text, a column, a whole page.</td><td>Each file in <code>lib/pages</code> is a page made of widgets.</td></tr>
+<tr><td>State and Provider</td><td>State is what the app currently remembers (for example the chosen theme). Provider shares it between screens.</td><td><code>theme_provider.dart</code> and <code>image_provider.dart</code>.</td></tr>
+<tr><td><code>pubspec.yaml</code></td><td>The app's shopping list of packages and files.</td><td>Lists <code>supabase_flutter</code>, <code>model_viewer_plus</code>, <code>pdf</code> and more.</td></tr>
+<tr><td><code>--dart-define-from-file</code></td><td>Hands your <code>env.json</code> settings to the app when it starts.</td><td>That is how the app learns the Supabase address and the backend address.</td></tr>
+<tr><td>Hot reload</td><td>Seeing code changes instantly without restarting.</td><td>Press <b>r</b> in the terminal while the app runs.</td></tr>
+<tr><td>Emulator</td><td>A pretend phone running on your computer.</td><td>An Android emulator reaches your computer at <code>10.0.2.2</code>.</td></tr>
+<tr><td>Web build</td><td>Turning the app into ordinary web files anyone can open in a browser.</td><td><code>flutter build web</code> makes <code>build/web</code>, served for testing.</td></tr>
+<tr><td>AR (augmented reality)</td><td>Showing a 3D object in your real room through the phone camera.</td><td>Each product's 3D model can be previewed in your space.</td></tr>
+<tr><td>GLB</td><td>A single file holding a 3D model.</td><td>One <code>.glb</code> per product in <code>dataset/&lt;theme&gt;/3d</code>, shown by <code>model_viewer_plus</code>.</td></tr>
+</table>
+
+<h2>3.5 The backend side</h2>
+<table>
+<tr><th>Word</th><th>Plain meaning</th><th>How Indar uses it</th></tr>
+<tr><td>Python</td><td>A beginner-friendly programming language.</td><td>The backend and every helper script.</td></tr>
+<tr><td>FastAPI</td><td>A Python package for building an API quickly.</td><td>Defines the routes and the automatic <code>/docs</code> page.</td></tr>
+<tr><td>uvicorn</td><td>The program that actually runs a FastAPI app and listens for requests.</td><td>Started by <code>main.py</code> on port 8000.</td></tr>
+<tr><td>Pydantic and schema</td><td>Rules describing what a request must contain; bad input is refused automatically.</td><td>Files in <code>app/schemas</code>. A design request needs a theme or a prompt.</td></tr>
+<tr><td>httpx</td><td>A Python package for making web requests.</td><td>The backend downloads the room photo with it; test scripts call the API with it.</td></tr>
+<tr><td>Migration</td><td>A saved, repeatable change to a database's structure.</td><td>The <code>migrations</code> folder (Alembic).</td></tr>
+<tr><td>Rows of a catalog</td><td>The list of products the app can place.</td><td>90 rows from <code>Dataset1.xlsx</code> with an ASIN, name, theme and category.</td></tr>
+<tr><td>ASIN</td><td>Amazon's code for one product.</td><td>Names every photo, 3D model and cut-out file, and is used in the cart link.</td></tr>
+<tr><td>Cart link (bundle)</td><td>One web address that adds several products to an Amazon cart.</td><td>Built only from the products shown in the picture.</td></tr>
+<tr><td>Category: Wall, Hanging, Floor</td><td>Where in a room a product belongs.</td><td>Decides where the compositor places it.</td></tr>
+</table>
+
+<h2>3.6 Pictures and the compositor</h2>
+<table>
+<tr><th>Word</th><th>Plain meaning</th><th>How Indar uses it</th></tr>
+<tr><td>Pixel</td><td>One tiny dot of a picture. A photo is a grid of them.</td><td>All picture code works on pixels.</td></tr>
+<tr><td>RGBA and alpha</td><td>Colour as red, green and blue plus "alpha", how see-through a pixel is.</td><td>Alpha makes the background of a cut-out invisible.</td></tr>
+<tr><td>PNG and JPEG</td><td>PNG can be transparent; JPEG is smaller but cannot be.</td><td>Cut-outs are PNG; finished pictures are JPEG.</td></tr>
+<tr><td>Pillow</td><td>A Python package for opening, changing and saving pictures.</td><td>Resizes, brightens, shades and pastes cut-outs.</td></tr>
+<tr><td>NumPy</td><td>A Python package for fast maths on big grids of numbers.</td><td>Reads a photo's brightness to find the floor line.</td></tr>
+<tr><td>Cut-out</td><td>A product photo with its background removed.</td><td>Pasted into the room photo.</td></tr>
+<tr><td>Flood fill</td><td>Spreading outward from the edges through one colour, like paint filling a shape.</td><td>Finds a plain background to make it transparent.</td></tr>
+<tr><td>Compositing</td><td>Combining several images into one.</td><td><code>compose_room</code> puts the products into your room photo.</td></tr>
+<tr><td>Contact shadow and drop shadow</td><td>A soft dark patch that makes an object look like it sits in the room.</td><td>Under floor items and behind wall items.</td></tr>
+<tr><td>Blur (Gaussian)</td><td>Softening an image so edges fade smoothly.</td><td>Makes shadows soft.</td></tr>
+<tr><td>Perspective</td><td>Things look squashed or smaller depending on distance and angle.</td><td>Rugs are drawn flat and squashed; nearer floor items are bigger.</td></tr>
+</table>
+
+<h2>3.7 The AI words (the first route)</h2>
+<table>
+<tr><th>Word</th><th>Plain meaning</th><th>How Indar uses it</th></tr>
+<tr><td>Generative AI</td><td>AI that makes new things, such as pictures, from a description.</td><td>The first version redrew rooms this way; the final one does not.</td></tr>
+<tr><td>Stable Diffusion</td><td>A well-known AI that makes pictures from text. It starts with noise and slowly cleans it into a picture.</td><td>The model family used on the GPU server.</td></tr>
+<tr><td>Dreamshaper 8</td><td>One trained version ("checkpoint") of Stable Diffusion.</td><td>The model that redecorated rooms.</td></tr>
+<tr><td>diffusers</td><td>A Python package for running those models.</td><td>Used inside <code>gpu_server/server.py</code>.</td></tr>
+<tr><td>Prompt</td><td>The text describing what you want.</td><td>Built from the theme and chosen items.</td></tr>
+<tr><td>img2img</td><td>Starting from your photo instead of from nothing, so the result is related to it.</td><td>Redecorating your own room.</td></tr>
+<tr><td>Denoise strength</td><td>How far the AI may change your photo: low keeps it, high redraws it.</td><td>Tuned to about 0.85 so decor appeared.</td></tr>
+<tr><td>ControlNet (canny)</td><td>An add-on that makes the AI follow the edges of your photo, so the room keeps its shape.</td><td>Stopped the room being lost while decorated.</td></tr>
+<tr><td>GPU</td><td>A fast chip for this kind of maths. Without one, AI pictures take far too long.</td><td>Needed by the AI route only.</td></tr>
+<tr><td>Colab</td><td>Google's free online notebook that lends a GPU for a few hours.</td><td>Ran the GPU server for free.</td></tr>
+<tr><td>Tunnel (cloudflared)</td><td>Gives a program on one computer a public web address.</td><td>Let the backend reach the Colab GPU server.</td></tr>
+<tr><td>ComfyUI</td><td>A popular program for running image AI.</td><td>The GPU server copies its API so a real ComfyUI could replace it.</td></tr>
+<tr><td>rembg</td><td>An AI that removes backgrounds from photos.</td><td>Tried for more cut-outs, then removed (chapter 9).</td></tr>
+</table>
+<div class="note"><b>Why both routes are described.</b> The AI route is part of how the project grew, and interviewers often ask about it. The final design does not use any of these AI words at run time, which is why the app now needs no GPU.</div>
+
+<h1>4. Getting a computer ready</h1>
 <p>These are the basic actions done once before any code was written. They are for Windows, which is what Indar was built on.</p>
 <div class="step"><b class="n">1</b><div>Install Git from git-scm.com. It also gives you Git Bash.</div></div>
 <div class="step"><b class="n">2</b><div>Install Python 3.12 or newer and <b>uv</b> (<code>pip install uv</code> or the installer from astral.sh).</div></div>
@@ -137,7 +259,7 @@ cp .env.example .env     # fill in the Supabase values
 uv sync</pre>
 <div class="note"><b>Note.</b> Never paste the database password, the service key, the JWT secret or the GPU token into chat or commit them. They live only in <code>.env</code> (backend) and <code>env.json</code> (app), both kept out of git.</div>
 
-<h1>4. How to run Indar, step by step</h1>
+<h1>5. How to run Indar, step by step</h1>
 <p>This chapter is for someone who has never run a project like this. Follow the steps in order. Nothing here needs a GPU, a paid account or any AI service: the app runs on your own computer using a free Supabase account.</p>
 <div class="note"><b>The big picture.</b> Indar has three pieces that must all be running: (1) the <b>database and storage</b> on Supabase's website, (2) the <b>backend</b>, a small Python program on your computer, and (3) the <b>app</b>, which you open in Chrome or on a phone. The app talks to the backend, and the backend talks to Supabase.</div>
 <h2>What you need before you start</h2>
@@ -146,7 +268,7 @@ uv sync</pre>
 <tr><td>A Windows, Mac or Linux computer with internet</td><td>Runs the backend and the app</td><td>-</td></tr>
 <tr><td>Git</td><td>Downloads the code</td><td>git-scm.com</td></tr>
 <tr><td>Python 3.12 or newer, and <b>uv</b></td><td>Runs the backend</td><td>python.org, then <code>pip install uv</code></td></tr>
-<tr><td>Flutter SDK</td><td>Builds and runs the app</td><td>docs.flutter.dev (chapter 3 lists the steps)</td></tr>
+<tr><td>Flutter SDK</td><td>Builds and runs the app</td><td>docs.flutter.dev (chapter 4 lists the steps)</td></tr>
 <tr><td>Google Chrome</td><td>Shows the app on your computer</td><td>google.com/chrome</td></tr>
 <tr><td>A free Supabase account</td><td>Database, sign-in and picture storage</td><td>supabase.com</td></tr>
 </table>
@@ -245,7 +367,7 @@ flutter run -d chrome --dart-define-from-file=env.json</pre>
 </table>
 <div class="note"><b>Optional extras.</b> Google sign-in needs a Google Cloud OAuth client (see the project README). The old AI drawing route needs a free Colab GPU and is no longer part of the normal flow.</div>
 
-<h1>5. Part 1: the backend and the data</h1>
+<h1>6. Part 1: the backend and the data</h1>
 <p>Goal: a working API with real accounts and a real product catalog before any screen exists, so every screen can be built against something true.</p>
 <h2>Step 1. Create the Supabase project</h2>
 <p>A new project gave three things: a <b>Project URL</b>, an <b>anon key</b> (safe to put in the app) and a <b>service_role key</b> (backend only). From <b>Connect</b> the <b>Session pooler</b> connection string was copied, because the direct connection does not work from many home networks. In <b>Authentication, Sign In / Providers, Email</b> the confirmation email was turned off for easy testing. In the JWT settings, the <b>legacy JWT secret</b> is what the backend uses to verify tokens.</p>
@@ -289,7 +411,7 @@ uv run python main.py                      # http://localhost:8000, docs at /doc
 <h2>Step 7. Test it with a script, not by hand</h2>
 <p>A small Python script signs in a test user with the Supabase client, then calls each route with <code>httpx</code> and prints the status codes. It was used again and again through the project (for example <code>catalog_test.py</code> runs every theme and prompt mode and checks that the cart equals what the picture shows).</p>
 
-<h1>6. Part 2: the Flutter app</h1>
+<h1>7. Part 2: the Flutter app</h1>
 <p>Goal: a simple flow a stranger can follow: sign in, add a photo, pick a theme, see the result, buy or preview in AR.</p>
 <h2>Step 1. Create the project and the config</h2>
 <pre>cd indar_app_frontend
@@ -320,7 +442,7 @@ flutter run --dart-define-from-file=env.json</pre>
 </ul>
 <div class="note"><b>Tip.</b> Keep platform differences behind one import (<code>file_download.dart</code> picks the web or stub file). Screens never ask "am I on the web?".</div>
 
-<h1>7. Part 3: making the picture (AI first, then real products)</h1>
+<h1>8. Part 3: making the picture (AI first, then real products)</h1>
 <h2>The first idea: let AI redecorate the room</h2>
 <p>The first design drew the room with AI. The backend picked theme products, planned where each goes (wall, hanging, floor), and sent the room photo to a GPU server that ran Dreamshaper 8 image-to-image. The GPU server speaks the same API as ComfyUI, so a real ComfyUI could replace it.</p>
 <h3>Running the GPU for free</h3>
@@ -349,7 +471,7 @@ flutter run --dart-define-from-file=env.json</pre>
 </table>
 <div class="note"><b>Trade-off.</b> The result is a collage of real products, not a painted scene. It is honest and buyable, but less pretty than AI art. This was a deliberate choice.</div>
 
-<h1>8. Part 4: cut-outs and growing the catalog</h1>
+<h1>9. Part 4: cut-outs and growing the catalog</h1>
 <h2>What a cut-out is</h2>
 <p>A cut-out is a product photo with the background removed (a transparent PNG), so it can be pasted on a room photo. <code>scripts/make_cutouts.py</code> makes them and writes <code>dataset/&lt;theme&gt;/Cutout/&lt;ASIN&gt;.png</code> plus a list in <code>dataset/cutouts.json</code>.</p>
 <h2>How a clean cut-out is made</h2>
@@ -369,7 +491,7 @@ uv run python -m app.database.seed            # loads the new rows
 uv run python scripts/setup_storage.py        # uploads the new files</pre>
 <p>About 30 real ASINs found by web search are already in <code>new_products.csv</code> but none were added yet, because their photos could not be fetched.</p>
 
-<h1>9. The routine for every change</h1>
+<h1>10. The routine for every change</h1>
 <div class="step"><b class="n">1</b><div><b>Make one small change.</b> One idea per commit.</div></div>
 <div class="step"><b class="n">2</b><div><b>Test the backend with a script.</b> Restart uvicorn (it caches the cut-out list at start) and run the API test for every theme and prompt mode. Check the status codes and that the cart equals the picture.</div></div>
 <div class="step"><b class="n">3</b><div><b>Look at the result.</b> Open the produced picture. Counting items is not enough; check overlaps, sizes and where things sit.</div></div>
@@ -388,7 +510,7 @@ git add -A &amp;&amp; git commit -m "..." &amp;&amp; git push</pre>
 <li>Avoid long scripts with nested quotes in one shell line; write them to a file instead.</li>
 </ul>
 
-<h1>10. The toughest problems, and how each was solved</h1>
+<h1>11. The toughest problems, and how each was solved</h1>
 <h2>1. "Imaginary" pictures</h2>
 <p><b>Symptom.</b> AI drew furniture and decor that were not in the catalog, or drew nothing visible.<br><b>Cause.</b> A generative model invents; it cannot be limited to a product list.<br><b>Fix.</b> Stop drawing. Paste real cut-outs into the user's photo, so the picture and the cart are the same list by construction.</p>
 <h2>2. The GPU server crashed on the scheduler</h2>
@@ -410,7 +532,7 @@ git add -A &amp;&amp; git commit -m "..." &amp;&amp; git push</pre>
 <h2>10. A tool that blocked a harmless command</h2>
 <p><b>Symptom.</b> A safety check blocked a pointless <code>rm</code> on a system path.<br><b>Lesson.</b> The block was right; the command had no purpose and was dropped.</p>
 
-<h1>11. Interview questions and how to answer them</h1>
+<h1>12. Interview questions and how to answer them</h1>
 <div class="qa">
 <h2>What does Indar do, in one breath?</h2>
 <p>You photograph your room, pick a festival theme or describe what you want, and the app shows your room with real products from an Amazon catalog placed in it. You can put exactly those products in a cart or preview them in AR.</p>
@@ -431,14 +553,14 @@ git add -A &amp;&amp; git commit -m "..." &amp;&amp; git push</pre>
 <h2>How did you show real progress?</h2>
 <p>The backend stores the current stage in memory under a progress id. The app sends the id in a header and polls an endpoint, then moves a bar through stages with plain-language names.</p>
 <h2>What was your hardest bug?</h2>
-<p>A good answer is chapter 10, problem 5: a scripted patch changed the wrong function, the unit-style checks passed, and only a real end-to-end generation exposed it. That is why I always run a real request after a change.</p>
+<p>A good answer is chapter 11, problem 5: a scripted patch changed the wrong function, the unit-style checks passed, and only a real end-to-end generation exposed it. That is why I always run a real request after a change.</p>
 <h2>What would you do next?</h2>
 <p>Host the backend for free, add many more products with clean photos so every theme fills a room, add real product sizes for correct scale, and test AR and the camera on a phone.</p>
 <h2>What are the limits you are honest about?</h2>
 <p>Only 31 of 90 products have clean cut-outs, so some themes are sparse; sizes are estimated; the picture is a collage rather than a painted scene; AR and gallery saving are not yet tested on a phone.</p>
 </div>
 
-<h1>12. Words used in Indar</h1>
+<h1>13. Words used in Indar</h1>
 <table>
 <tr><th>Word</th><th>Meaning</th></tr>
 <tr><td>ASIN</td><td>Amazon's product code. Files are named by it.</td></tr>
