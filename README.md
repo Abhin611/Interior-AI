@@ -131,7 +131,7 @@ A design picture is your room photo with real catalog products placed in it (no 
 
 ```bash
 cd indar_app_backend
-uv run --with "rembg[cpu]" python scripts/make_cutouts.py --ml   # plain-background photos + the small rembg model for the rest
+uv run python scripts/make_cutouts.py   # keeps only products photographed on a plain background
 ```
 
-Products whose cut-out looks poor are listed in `dataset/cutout_blocklist.txt`. To add products, put their ASINs in `scripts/new_products.csv` (or save their photos in `scripts/new_photos/<ASIN>.jpg`) and run `uv run python scripts/add_products.py`, then `uv run python -m app.database.seed` and `uv run python scripts/setup_storage.py`.
+Only products with a clean cut-out are drawn into pictures. To add products, put their ASINs in `scripts/new_products.csv` (or save their photos in `scripts/new_photos/<ASIN>.jpg`) and run `uv run python scripts/add_products.py`, then `uv run python -m app.database.seed` and `uv run python scripts/setup_storage.py`.

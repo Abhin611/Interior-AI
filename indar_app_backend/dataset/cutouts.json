@@ -1,163 +1,33 @@
 {
- "B077XDNQC4": {
-  "theme": "Birthday",
-  "w": 643,
-  "h": 520
- },
- "B08347SQ8Z": {
-  "theme": "Birthday",
-  "w": 610,
-  "h": 509
- },
  "B0B1M9HM22": {
   "theme": "Birthday",
   "w": 700,
   "h": 656
- },
- "B0BM4Q8MD2": {
-  "theme": "Birthday",
-  "w": 670,
-  "h": 636
  },
  "B0BSR4QM8L": {
   "theme": "Birthday",
   "w": 700,
   "h": 700
  },
- "B0CDXX3W8J": {
-  "theme": "Birthday",
-  "w": 700,
-  "h": 620
- },
  "B0D5YRW9N8": {
   "theme": "Birthday",
   "w": 700,
   "h": 568
- },
- "B0D5Z4NMJR": {
-  "theme": "Birthday",
-  "w": 579,
-  "h": 521
- },
- "B0D6BJJGLP": {
-  "theme": "Birthday",
-  "w": 671,
-  "h": 453
- },
- "B0F74QXK61": {
-  "theme": "Birthday",
-  "w": 700,
-  "h": 464
  },
  "B0FDPVZ972": {
   "theme": "Birthday",
   "w": 647,
   "h": 700
  },
- "B0FMYBXXXS": {
-  "theme": "Birthday",
-  "w": 700,
-  "h": 671
- },
- "B0FQCHVSND": {
-  "theme": "Birthday",
-  "w": 284,
-  "h": 407
- },
- "B0FSCW7WKY": {
-  "theme": "Birthday",
-  "w": 700,
-  "h": 351
- },
- "B0G6YLYXZT": {
-  "theme": "Birthday",
-  "w": 657,
-  "h": 633
- },
- "B07Q2DTMBL": {
-  "theme": "Christmas",
-  "w": 381,
-  "h": 700
- },
- "B0CN4XP2H8": {
-  "theme": "Christmas",
-  "w": 661,
-  "h": 628
- },
  "B0CP2L9911": {
   "theme": "Christmas",
   "w": 271,
   "h": 700
  },
- "B0DNFQ9DFY": {
-  "theme": "Christmas",
-  "w": 163,
-  "h": 570
- },
  "B0FHWSW1NN": {
   "theme": "Christmas",
   "w": 700,
   "h": 467
- },
- "B0FRF2Z68T": {
-  "theme": "Christmas",
-  "w": 680,
-  "h": 483
- },
- "B0FWQZHZTG": {
-  "theme": "Christmas",
-  "w": 163,
-  "h": 570
- },
- "B0FY36G1KV": {
-  "theme": "Christmas",
-  "w": 404,
-  "h": 596
- },
- "B0G1MS2KD6": {
-  "theme": "Christmas",
-  "w": 511,
-  "h": 573
- },
- "B0BCKVS2GL": {
-  "theme": "Diwali",
-  "w": 647,
-  "h": 443
- },
- "B0D1Y4Z7NW": {
-  "theme": "Diwali",
-  "w": 681,
-  "h": 266
- },
- "B0D2Y72ZP1": {
-  "theme": "Diwali",
-  "w": 410,
-  "h": 690
- },
- "B0DBGBS329": {
-  "theme": "Diwali",
-  "w": 485,
-  "h": 361
- },
- "B0DTKLZ2D5": {
-  "theme": "Diwali",
-  "w": 478,
-  "h": 573
- },
- "B0FGW5BYDF": {
-  "theme": "Diwali",
-  "w": 488,
-  "h": 503
- },
- "B0FJ75WDW1": {
-  "theme": "Diwali",
-  "w": 507,
-  "h": 376
- },
- "B0FJRXQTCL": {
-  "theme": "Diwali",
-  "w": 550,
-  "h": 459
  },
  "B0FLWX1KJ7": {
   "theme": "Diwali",
@@ -169,16 +39,6 @@
   "w": 591,
   "h": 573
  },
- "B098LHYGFG": {
-  "theme": "Halloween",
-  "w": 601,
-  "h": 266
- },
- "B09B2G1JJ2": {
-  "theme": "Halloween",
-  "w": 680,
-  "h": 307
- },
  "B09FY732N5": {
   "theme": "Halloween",
   "w": 700,
@@ -188,11 +48,6 @@
   "theme": "Halloween",
   "w": 700,
   "h": 430
- },
- "B09R53V8H1": {
-  "theme": "Halloween",
-  "w": 604,
-  "h": 550
  },
  "B0C4F6Z97Q": {
   "theme": "Halloween",
@@ -229,21 +84,6 @@
   "w": 447,
   "h": 668
  },
- "B09ZQLYNDJ": {
-  "theme": "onam",
-  "w": 561,
-  "h": 481
- },
- "B0BD93WNCT": {
-  "theme": "onam",
-  "w": 359,
-  "h": 482
- },
- "B0C9WS24S3": {
-  "theme": "onam",
-  "w": 576,
-  "h": 348
- },
  "B0F8P2T43Y": {
   "theme": "onam",
   "w": 394,
@@ -263,16 +103,6 @@
   "theme": "onam",
   "w": 463,
   "h": 603
- },
- "B0FN5RK7TJ": {
-  "theme": "onam",
-  "w": 672,
-  "h": 633
- },
- "B0FNWV9JXK": {
-  "theme": "onam",
-  "w": 402,
-  "h": 677
  },
  "B0FRGG6NVQ": {
   "theme": "onam",
@@ -323,10 +153,5 @@
   "theme": "Pop-Culture",
   "w": 700,
   "h": 700
- },
- "B0FZK6964P": {
-  "theme": "Pop-Culture",
-  "w": 700,
-  "h": 475
  }
 }
