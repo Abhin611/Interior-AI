@@ -10,7 +10,7 @@ Indar's backend is a **FastAPI orchestration engine** that chains together image
 
 1. 📸 **Ingests** your room photo and session context (Supabase)
 2. 🎨 **Generates** a redecorated version of *your actual room* using ComfyUI + Dreamshaper 8 (img2img — grounded in your real layout and lighting, not a random inspiration pic)
-3. 👀 **Understands** the generated redesign with LLaVA, identifying real furniture and decor items instead of vague style tags
+3. 🧩 **Matches** products from the theme catalog (only items that have a GLB model) and plans where each one goes in the room
 4. 🛒 **Bundles** matched products into a purchasable Amazon cart
 5. 🕶️ **Serves** GLB assets so those exact products can be previewed in AR before you buy
 
@@ -18,10 +18,10 @@ Indar's backend is a **FastAPI orchestration engine** that chains together image
 
 ## 🧠 Why it's interesting
 
-The hard part isn't calling one AI model — it's making **three models that were never built to talk to each other** work as one pipeline:
+The hard part isn't calling one AI model — it's making **independent stages that were never built to talk to each other** work as one pipeline:
 
 - ComfyUI outputs *pixels*, not products
-- LLaVA has to reverse-engineer those pixels into catalog-matchable items
+- Product matching has to turn a theme into catalog items that fit the room
 - The AR step needs a GLB model to exist for whatever gets picked
 
 So the backend enforces strict data contracts between each stage — normalizing model output, validating it against what the next stage actually needs, and folding AR-asset availability *into* the product-matching logic itself (a great visual match with no 3D model is a dead end).
@@ -34,7 +34,7 @@ So the backend enforces strict data contracts between each stage — normalizing
 |---|---|
 | API | FastAPI |
 | Image Generation | ComfyUI + Dreamshaper 8 (img2img) |
-| Product Matching | LLaVA (vision-language model) |
+| Product Matching | Theme catalog + placement planning (no vision model needed) |
 | AR Assets | GLB models |
 | Storage | Supabase |
 | Commerce | Amazon bundle generation |
@@ -48,7 +48,7 @@ So the backend enforces strict data contracts between each stage — normalizing
     ↓
 🎨 ComfyUI (Dreamshaper 8) → Redecorated Visual
     ↓
-🧠 LLaVA → Matched Real Products
+🧩 Catalog matching → Real Products
     ↓
 🕶️ GLB Resolution (AR-ready check)
     ↓
